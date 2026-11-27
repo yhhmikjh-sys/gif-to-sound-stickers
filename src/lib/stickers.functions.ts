@@ -8,13 +8,14 @@ const GIPHY_KEY = "3o85xmWDYKgihhIKSA";
 const PAGE = 40;
 
 export const searchStickers = createServerFn({ method: "GET" })
-  .inputValidator((d: { q: string; offset?: number }) => ({
+  .inputValidator((d: { q: string; offset?: number; kind?: "gifs" | "stickers" }) => ({
+    kind: d?.kind === "stickers" ? "stickers" : "gifs",
     q: String(d?.q ?? "").trim().slice(0, 100),
     offset: Math.max(0, Math.min(4999, Number(d?.offset) || 0)),
   }))
   .handler(async ({ data }): Promise<StickerPage> => {
     if (!data.q) return { items: [], nextOffset: null };
-    const url = `https://api.giphy.com/v1/stickers/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(data.q)}&limit=${PAGE}&offset=${data.offset}&rating=pg-13&lang=en`;
+    const url = `https://api.giphy.com/v1/${data.kind}/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(data.q)}&limit=${PAGE}&offset=${data.offset}&rating=pg-13&lang=en`;
     const res = await fetch(url, { headers: { Accept: "application/json", Origin: "https://web.whatsapp.com" } });
     if (!res.ok) throw new Error("Sticker search failed");
     type G = { id: string; title: string; images: Record<string, { url?: string; webp?: string }> };

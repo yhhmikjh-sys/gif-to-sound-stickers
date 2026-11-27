@@ -18,13 +18,14 @@ export const Route = createFileRoute("/")({
 function Index() {
   const [input, setInput] = useState("");
   const [q, setQ] = useState("");
+  const [kind, setKind] = useState<"gifs" | "stickers">("gifs");
   const sentinel = useRef<HTMLDivElement>(null);
 
   const query = useInfiniteQuery({
-    queryKey: ["stickers", q],
+    queryKey: ["stickers", kind, q],
     enabled: !!q,
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => searchStickers({ data: { q, offset: pageParam } }),
+    queryFn: ({ pageParam }) => searchStickers({ data: { q, kind, offset: pageParam } }),
     getNextPageParam: (last) => last.nextOffset ?? undefined,
   });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
@@ -68,6 +69,19 @@ function Index() {
             Search
           </button>
         </form>
+
+        <div className="mx-auto mt-4 flex max-w-xs overflow-hidden rounded-full border-2 border-foreground">
+          {(["gifs", "stickers"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`flex-1 py-2 text-sm font-semibold ${kind === k ? "bg-foreground text-background" : "bg-card text-foreground"}`}
+            >
+              {k === "gifs" ? "GIF" : "Sticker"}
+            </button>
+          ))}
+        </div>
 
         {query.isError && <p className="mt-8 text-center text-destructive">Search failed, try again.</p>}
         {query.isSuccess && items.length === 0 && (
