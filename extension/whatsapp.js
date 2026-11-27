@@ -97,6 +97,30 @@
     }
   }
 
+  // Feed the file to WhatsApp's own "Create sticker" editor (sticker tray → Create). WhatsApp's new sound
+  // stickers are a native message type only its own UI can send; stickers made from a video keep its audio.
+  async function viaStickerCreator(s) {
+    message("WhatsApp ka sticker editor khol raha hoon…");
+    let file;
+    try { file = await toFile(s); } catch { message("Sticker load nahi hua."); return; }
+    const before = new Set(document.querySelectorAll('input[type="file"]'));
+    const tray = document.querySelector('footer [aria-label*="ticker" i], footer span[data-icon*="sticker"], footer [aria-label*="Emoji" i], footer span[data-icon*="emoji"], footer span[data-icon*="expressions"]');
+    (tray?.closest('button, div[role="button"]') || tray)?.click();
+    let input = null;
+    for (let i = 0; i < 40 && !input; i++) {
+      await wait(150);
+      const create = [...document.querySelectorAll('button, div[role="button"]')].find((b) => /^\s*(Create|बनाएं)\s*$/i.test(b.textContent || "") || /create sticker/i.test(b.getAttribute("aria-label") || ""));
+      input = [...document.querySelectorAll('input[type="file"]')].find((x) => !before.has(x) && /image|video/.test(x.accept || ""));
+      if (!input && create && i % 5 === 0) create.click();
+    }
+    if (!input) { message("WhatsApp ka Create sticker button nahi mila. Sticker tray → Create khud dabao, phir dobara try karo."); return; }
+    const t = new DataTransfer(); t.items.add(file);
+    input.files = t.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    panel.style.display = "none";
+    message("Editor mein sound button (🔊) check karo, phir Send dabao.");
+  }
+
   async function dropIntoChat(s) {
     const box = document.querySelector('footer div[contenteditable="true"]');
     if (!box) { message("Pehle koi chat kholo, phir sticker chuno."); return; }
@@ -143,6 +167,12 @@
         Object.assign(play.style, { position: "absolute", left: "6px", top: "6px", width: "32px", height: "32px", border: "none", borderRadius: "999px", background: "#25D366", color: "#fff", cursor: "pointer", fontSize: "15px" });
         play.onclick = (e) => { e.stopPropagation(); void togglePlay(s, play); };
         card.append(play);
+        const st = document.createElement("button");
+        st.textContent = "Sticker";
+        st.setAttribute("aria-label", "Send as WhatsApp sticker");
+        Object.assign(st.style, { position: "absolute", right: "6px", top: "6px", padding: "4px 8px", border: "none", borderRadius: "999px", background: "#111", color: "#fff", cursor: "pointer", fontSize: "11px", fontWeight: "700" });
+        st.onclick = (e) => { e.stopPropagation(); void viaStickerCreator(s); };
+        card.append(st);
       }
       const title = document.createElement("div");
       title.textContent = s.title;
