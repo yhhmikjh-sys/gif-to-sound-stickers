@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { SearchBar } from "@/components/SearchBar";
 import { listPublicStickers } from "@/lib/public-stickers.functions";
 import { SoundGif } from "@/components/SoundGif";
+import { WhatsAppAppButtons } from "@/components/WhatsAppAppButtons";
 import { ExtensionButton } from "@/components/ExtensionButton";
 import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
 
@@ -70,6 +71,7 @@ function Explore() {
                 {s.video_url && (
                   <ExtensionButton url={s.video_url} title={s.title} small />
                 )}
+                <WhatsAppAppButtons small title={s.title} link={`${typeof window === "undefined" ? "" : window.location.origin}/explore?q=${encodeURIComponent(s.title)}`} />
               </div>
             </div>
           ))}

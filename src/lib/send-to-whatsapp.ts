@@ -33,3 +33,28 @@ export async function sendToWhatsApp(url: string, title: string): Promise<"share
 }
 
 export const WEB_HINT = "WhatsApp Web khul gaya. Jisko bhejna hai woh chat chuno aur Send dabao.";
+
+// Phone apps by Android package name. A web page cannot hand a file to one specific app (only the share sheet can),
+// so these open the chosen app with a text + link; the share sheet stays the way to send the sticker file itself.
+export const WA_APPS = [
+  { pkg: "com.whatsapp", label: "WhatsApp" },
+  { pkg: "com.whatsapp.w4b", label: "WhatsApp Business" },
+] as const;
+
+export function phoneOs(): "android" | "ios" | null {
+  if (typeof navigator === "undefined") return null;
+  if (/Android/i.test(navigator.userAgent)) return "android";
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return "ios";
+  return null;
+}
+
+/** Android intent URL that opens exactly this WhatsApp package with the text; falls back to the Play Store. */
+export function whatsappIntentUrl(pkg: string, text: string) {
+  const store = `https://play.google.com/store/apps/details?id=${pkg}`;
+  return `intent://send/?text=${encodeURIComponent(text)}#Intent;scheme=whatsapp;package=${pkg};S.browser_fallback_url=${encodeURIComponent(store)};end`;
+}
+
+export function openWhatsAppApp(pkg: string, title: string, link: string) {
+  const text = `${title} 🔊 ${link}`;
+  window.location.href = phoneOs() === "android" ? whatsappIntentUrl(pkg, text) : `whatsapp://send?text=${encodeURIComponent(text)}`;
+}
