@@ -83,52 +83,7 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, o
   };
 
   const down = (ev: React.PointerEvent) => {
-    if (!ready) return;
-    ev.preventDefault();
-    audio.current?.pause(); setPos(null);
-    const t = timeAt(ev.clientX);
-    const tol = duration * 0.04;
-    mode.current = Math.abs(t - s0) < tol ? "l" : Math.abs(t - e0) < tol ? "r" : t < s0 ? "l" : t > e0 ? "r" : "m";
-    grab.current = t - s0;
-    cur.current = { start: s0, end: e0 };
-    if (mode.current !== "m") move(ev.clientX);
-    const mv = (e: PointerEvent) => move(e.clientX);
-    const up = () => {
-      grab.current = null;
-      window.removeEventListener("pointermove", mv);
-      window.removeEventListener("pointerup", up);
-      play();
-    };
-    window.addEventListener("pointermove", mv);
-    window.addEventListener("pointerup", up);
-  };
-
-  const nudge = (d: number) => {
-    const ns = Math.min(Math.max(0, s0 + d), Math.max(0, duration - win));
-    onChange(ns, ns + win);
-  };
-
-  if (!ready) return;
-    ev.preventDefault();
-    audio.current?.pause(); setPos(null);
-    grab.current = timeAt(ev.clientX) - s0;
-    const mv = (e: PointerEvent) => slide(e.clientX);
-    const up = () => {
-      grab.current = null;
-      window.removeEventListener("pointermove", mv);
-      window.removeEventListener("pointerup", up);
-      play();
-    };
-    window.addEventListener("pointermove", mv);
-    window.addEventListener("pointerup", up);
-  };
-
-  const nudge = (d: number) => {
-    const ns = Math.min(Math.max(0, s0 + d), Math.max(0, duration - win));
-    onChange(ns, ns + win);
-  };
-
-  if (!ready) return <div className="h-24 animate-pulse rounded-xl bg-muted" />;
+    if (!ready) return <div className="h-24 animate-pulse rounded-xl bg-muted" />;
   const pct = (t: number) => `${(t / duration) * 100}%`;
 
   return (
