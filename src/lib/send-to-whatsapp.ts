@@ -17,7 +17,6 @@ export function prepareShare(url: string, title: string): Promise<File> {
 
 export async function sendToWhatsApp(url: string, title: string): Promise<"shared" | "web"> {
   const file = await prepareShare(url, title);
-  const blob = file;
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({ files: [file] });
     return "shared";
@@ -27,7 +26,10 @@ export async function sendToWhatsApp(url: string, title: string): Promise<"share
     await navigator.share({ title: file.name, url });
     return "shared";
   }
+  // Computer without a share menu: open WhatsApp Web; the user picks the chat there.
+  const link = /^https?:/.test(url) ? `https://web.whatsapp.com/send?text=${encodeURIComponent(`${title} 🔊 ${url}`)}` : "https://web.whatsapp.com/";
+  window.open(link, "_blank", "noopener");
   return "web";
 }
 
-export const WEB_HINT = "Is browser mein share menu nahi hai. Phone par Chrome ya Safari mein kholo.";
+export const WEB_HINT = "WhatsApp Web khul gaya. Jisko bhejna hai woh chat chuno aur Send dabao.";
