@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { SearchBar } from "@/components/SearchBar";
 import { listPublicStickers } from "@/lib/public-stickers.functions";
 import { SoundGif } from "@/components/SoundGif";
+import { sendToWhatsApp, WEB_HINT } from "@/lib/send-to-whatsapp";
 
 // Signed URLs are cross-origin, so fetch to a blob to keep the file name.
 async function saveGif(url: string, title: string) {
@@ -73,6 +74,12 @@ function Explore() {
                   <button type="button" onClick={() => void saveGif(s.video_url!, s.title)}
                     className="mt-2 w-full rounded-full border-2 border-foreground bg-primary py-1 text-xs font-semibold text-primary-foreground">
                     ⬇ GIF with sound
+                  </button>
+                )}
+                {s.video_url && (
+                  <button type="button" onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch(() => {})}
+                    className="mt-1 w-full rounded-full border-2 border-foreground bg-[#25D366] py-1 text-xs font-semibold text-white">
+                    📤 Send on WhatsApp
                   </button>
                 )}
               </div>

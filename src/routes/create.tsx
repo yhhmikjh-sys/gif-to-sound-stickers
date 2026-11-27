@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { makeSoundSticker, gifSeconds, WHATSAPP_GIF_MAX } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
+import { sendToWhatsApp, WEB_HINT } from "@/lib/send-to-whatsapp";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
 import { SoundGif } from "@/components/SoundGif";
@@ -38,14 +39,6 @@ function download(href: string, name: string) {
   a.href = href;
   a.download = name;
   a.click();
-}
-
-async function shareOrCopy(url: string, name: string, mime: string) {
-  const blob = await (await fetch(url)).blob();
-  const f = new File([blob], name, { type: mime });
-  if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f] }); return "shared"; }
-  try { await navigator.clipboard.write([new ClipboardItem({ [mime]: blob })]); return "copied"; } catch { /* browsers rarely allow video on the clipboard */ }
-  throw new Error("This browser can't copy a GIF with sound. Open the app on your phone and tap Copy / Send to WhatsApp, or Download.");
 }
 
 function CreatePage() {
@@ -190,9 +183,9 @@ function CreatePage() {
                   ? "In WhatsApp: attach → Gallery → pick this file → tap the GIF switch at the top → Send. It shows as a GIF with a 🔇 sound button."
                   : "This browser can't make a GIF with sound. Open the app in Chrome, Edge or Safari to get one."}
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button onClick={() => download(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`)} className="rounded-full border-2 border-foreground bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Download GIF with sound</button>
-                <button onClick={() => { setCopyMsg(""); shareOrCopy(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`, result.mime).then((r) => setCopyMsg(r === "copied" ? "Copied! Paste it in WhatsApp." : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-card px-4 py-2 text-sm font-semibold text-foreground">📋 Copy / Send to WhatsApp</button>
+                <button onClick={() => { setCopyMsg(""); sendToWhatsApp(result.url, title).then((r) => setCopyMsg(r === "web" ? WEB_HINT : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-[#25D366] px-4 py-2 text-sm font-semibold text-white">📤 Send on WhatsApp</button>
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
               {copyMsg && <p className="mt-2 text-sm text-muted-foreground">{copyMsg}</p>}
