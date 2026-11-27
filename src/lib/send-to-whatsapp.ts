@@ -21,11 +21,8 @@ export async function sendToWhatsApp(url: string, title: string): Promise<"share
     await navigator.share({ files: [file] });
     return "shared";
   }
-  // Never download. If the browser can't share files, share the sticker link instead.
-  if (navigator.share && /^https?:/.test(url)) {
-    await navigator.share({ title: file.name, url });
-    return "shared";
-  }
+  // Phones must send the sticker file itself, never a link.
+  if (phoneOs()) throw new Error("Is browser se file share nahi ho rahi. Chrome (Android) ya Safari (iPhone) mein kholo.");
   // Computer without a share menu: open WhatsApp Web; the user picks the chat there.
   const link = /^https?:/.test(url) ? `https://web.whatsapp.com/send?text=${encodeURIComponent(`${title} 🔊 ${url}`)}` : "https://web.whatsapp.com/";
   window.open(link, "_blank", "noopener");
@@ -52,9 +49,4 @@ export function phoneOs(): "android" | "ios" | null {
 export function whatsappIntentUrl(pkg: string, text: string) {
   const store = `https://play.google.com/store/apps/details?id=${pkg}`;
   return `intent://send/?text=${encodeURIComponent(text)}#Intent;scheme=whatsapp;package=${pkg};S.browser_fallback_url=${encodeURIComponent(store)};end`;
-}
-
-export function openWhatsAppApp(pkg: string, title: string, link: string) {
-  const text = `${title} 🔊 ${link}`;
-  window.location.href = phoneOs() === "android" ? whatsappIntentUrl(pkg, text) : `whatsapp://send?text=${encodeURIComponent(text)}`;
 }

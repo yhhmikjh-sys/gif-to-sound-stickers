@@ -71,7 +71,7 @@ function Explore() {
                 {s.video_url && (
                   <ExtensionButton url={s.video_url} title={s.title} small />
                 )}
-                <WhatsAppAppButtons small title={s.title} link={`${typeof window === "undefined" ? "" : window.location.origin}/explore?q=${encodeURIComponent(s.title)}`} />
+                {s.video_url && <WhatsAppAppButtons small url={s.video_url} title={s.title} />}
               </div>
             </div>
           ))}
