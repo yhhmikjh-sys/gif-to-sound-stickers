@@ -53,3 +53,22 @@ export const makeWhatsAppSticker = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     return `data:image/webp;base64,${btoa(bin)}`;
   });
+
+// One small meme GIF matching a sound's title (thumbnail next to sound packs).
+export const memeThumb = createServerFn({ method: "GET" })
+  .inputValidator((d: { q: string }) => ({ q: String(d?.q ?? "").replace(/[^\p{L}\p{N} ]/gu, " ").trim().slice(0, 60) }))
+  .handler(async ({ data }): Promise<string | null> => {
+    if (!data.q) return null;
+    // Try the full title, then fewer words, until GIPHY finds a meme.
+    const words = data.q.split(/\s+/);
+    const tries = [...new Set([data.q, words.slice(0, 3).join(" "), words.slice(0, 2).join(" "), words[0] ?? ""])].filter(Boolean);
+    for (const t of tries) {
+      const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(t)}&limit=1&rating=pg-13&lang=en`;
+      const res = await fetch(url, { headers: { Accept: "application/json", Origin: "https://web.whatsapp.com" } });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { data?: { images: Record<string, { url?: string; webp?: string }> }[] };
+      const img = json.data?.[0]?.images["fixed_height_small"];
+      if (img?.webp ?? img?.url) return img.webp ?? img.url ?? null;
+    }
+    return null;
+  });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { memeThumb } from "@/lib/stickers.functions";
 import { searchSounds, type Sound } from "@/lib/sounds.functions";
 
 export const soundUrl = (path: string) => `/api/sound?path=${encodeURIComponent(path)}`;
@@ -75,6 +76,7 @@ export function SoundPicker({ initialQuery, onClose, onSelect }: { initialQuery:
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-lg text-primary-foreground">
                 {playing === s.id ? "■" : "▶"}
               </button>
+              <MemeThumb title={s.title} onClick={() => toggle(s)} />
               <button onClick={() => toggle(s)} className="min-w-0 flex-1 truncate text-left font-semibold text-foreground">{s.title}</button>
               <button onClick={() => { audio.current?.pause(); onSelect(s); }}
                 className="rounded-full border-2 border-foreground bg-foreground px-4 py-1.5 text-sm font-semibold text-background">Select</button>
@@ -84,5 +86,24 @@ export function SoundPicker({ initialQuery, onClose, onSelect }: { initialQuery:
         <div ref={sentinel} className="py-6 text-center text-muted-foreground">{(query.isFetching || isFetchingNextPage) && "Loading..."}</div>
       </div>
     </div>
+  );
+}
+
+// Related meme GIF for a sound, loaded only when the row scrolls into view.
+function MemeThumb({ title, onClick }: { title: string; onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) { setSeen(true); io.disconnect(); } }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const q = useQuery({ queryKey: ["meme-thumb", title], queryFn: () => memeThumb({ data: { q: title } }), enabled: seen, staleTime: Infinity });
+  return (
+    <button ref={ref} onClick={onClick} aria-label={`Meme for ${title}`} className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-foreground bg-muted">
+      {q.data ? <img src={q.data} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="text-xl">🎭</span>}
+    </button>
   );
 }
