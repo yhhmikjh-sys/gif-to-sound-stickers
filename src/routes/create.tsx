@@ -80,13 +80,19 @@ function CreatePage() {
       } else if (file) audio = await file.arrayBuffer();
       else throw new Error("Pick a sound first");
       const { blob, mime } = await makeSoundSticker({ gifUrl: s.gif, audio, start, seconds });
+      // Also build the WhatsApp native sound sticker (WebP + Ogg/Opus) so the extension sends a real sticker.
+      let waFiles: { webp: Blob; ogg: Blob; seconds: number } | null = null;
+      try {
+        const { makeWhatsAppSoundSticker } = await import("@/lib/wa-sticker-format");
+        waFiles = await makeWhatsAppSoundSticker({ gifUrl: s.gif, audio, start, seconds });
+      } catch (e) { console.warn("WhatsApp sticker files failed", e); }
       let saved = false;
       if (isPublic) {
-        await savePublicSticker({ data: { title, language: s.lang || "all", gifUrl: s.gif, videoBase64: await toBase64(blob), mime } });
+        await savePublicSticker({ data: { title, language: s.lang || "all", gifUrl: s.gif, videoBase64: await toBase64(blob), mime, ...(waFiles ? { stickerBase64: await toBase64(waFiles.webp), soundBase64: await toBase64(waFiles.ogg), soundSeconds: waFiles.seconds } : {}) } });
         saved = true;
       }
       let mine = false;
-      if (user) { await saveToMyStickers(user.id, blob, mime, title, s.gif); mine = true; }
+      if (user) { await saveToMyStickers(user.id, blob, mime, title, s.gif, waFiles); mine = true; }
       return { url: URL.createObjectURL(blob), mime, saved, mine };
     },
     onSuccess: setResult,

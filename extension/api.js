@@ -36,21 +36,22 @@ async function sbFetch(path, init = {}, retry = true) {
 
 // The signed-in user's stickers with short-lived file links.
 async function sbMyStickers() {
-  const rows = await sbFetch("/rest/v1/my_stickers?select=id,title,gif_url,video_path,mime&order=created_at.desc&limit=100");
+  const rows = await sbFetch("/rest/v1/my_stickers?select=id,title,gif_url,video_path,mime,sticker_path,sound_path,sound_seconds&order=created_at.desc&limit=100");
   if (!rows.length) return [];
-  const signed = await sbFetch("/storage/v1/object/sign/sticker-videos", { method: "POST", body: JSON.stringify({ expiresIn: 3600, paths: rows.map((r) => r.video_path) }) });
+  const signed = await sbFetch("/storage/v1/object/sign/sticker-videos", { method: "POST", body: JSON.stringify({ expiresIn: 3600, paths: rows.flatMap((r) => [r.video_path, r.sticker_path, r.sound_path].filter(Boolean)) }) });
   const byPath = new Map(signed.map((x) => [x.path, x.signedURL]));
-  return rows.map((r) => ({ id: r.id, title: r.title, gif: r.gif_url, mime: r.mime, url: byPath.get(r.video_path) ? SB_URL + "/storage/v1" + byPath.get(r.video_path) : null })).filter((r) => r.url);
+  const full = (p) => (p && byPath.get(p) ? SB_URL + "/storage/v1" + byPath.get(p) : null);
+  return rows.map((r) => ({ id: r.id, title: r.title, gif: r.gif_url, mime: r.mime, url: full(r.video_path), stickerUrl: full(r.sticker_path), soundUrl: full(r.sound_path), soundSeconds: r.sound_seconds })).filter((r) => r.url);
 }
 
 // Published stickers are readable without an account. Only root-level public files are exposed by storage policy.
 async function sbPublicStickers(offset = 0) {
   const headers = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
-  const path = `/rest/v1/public_stickers?select=id,title,gif_url,video_url&order=created_at.desc&limit=30&offset=${Math.max(0, offset)}`;
+  const path = `/rest/v1/public_stickers?select=id,title,gif_url,video_url,sticker_path,sound_path,sound_seconds&order=created_at.desc&limit=30&offset=${Math.max(0, offset)}`;
   const r = await fetch(SB_URL + path, { headers });
   if (!r.ok) throw new Error(`Public stickers load failed (${r.status})`);
   const rows = await r.json();
-  const paths = rows.map((x) => x.video_url).filter(Boolean);
+  const paths = rows.flatMap((x) => [x.video_url, x.sticker_path, x.sound_path]).filter(Boolean);
   const byPath = new Map();
   if (paths.length) {
     const signedResponse = await fetch(`${SB_URL}/storage/v1/object/sign/sticker-videos`, { method: "POST", headers, body: JSON.stringify({ expiresIn: 3600, paths }) });
@@ -65,6 +66,9 @@ async function sbPublicStickers(offset = 0) {
       gif: x.gif_url,
       url: x.video_url ? byPath.get(x.video_url) : x.gif_url,
       isGif: !x.video_url,
+      stickerUrl: x.sticker_path ? byPath.get(x.sticker_path) : null,
+      soundUrl: x.sound_path ? byPath.get(x.sound_path) : null,
+      soundSeconds: x.sound_seconds,
     })).filter((x) => x.url),
     nextOffset: rows.length === 30 ? offset + 30 : null,
   };

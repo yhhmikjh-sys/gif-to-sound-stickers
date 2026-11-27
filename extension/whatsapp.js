@@ -97,13 +97,47 @@
     }
   }
 
+  // Real sticker with sound: WebP + Ogg/Opus (saved at Create, or built here for older stickers),
+  // handed to wa-native.js which sends it through WhatsApp Web. Falls back to a silent pasted WebP sticker.
+  async function waFiles(s) {
+    if (s.stickerUrl && s.soundUrl) {
+      const [w, o] = await Promise.all([s.stickerUrl, s.soundUrl].map((u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })));
+      return { webp: w, ogg: o, seconds: s.soundSeconds || 3 };
+    }
+    if (s.isGif) return null;
+    const src = await videoSrc(s);
+    const { ogg, seconds } = await WAF.oggFrom(await (await fetch(src)).arrayBuffer());
+    const webp = WAF.tagWebp(new Uint8Array(await (await makeWebpSticker(src)).arrayBuffer()), await WAF.sha(ogg));
+    return { webp: webp.buffer, ogg: ogg.buffer, seconds };
+  }
+  function sendNative(files) {
+    const id = Math.random().toString(36).slice(2);
+    return new Promise((res) => {
+      const t = setTimeout(() => { window.removeEventListener("message", on); res({ ok: false, error: "timeout" }); }, 60000);
+      function on(e) {
+        if (e.source !== window || e.data?.type !== "STIKDESI_NATIVE_DONE" || e.data.id !== id) return;
+        clearTimeout(t); window.removeEventListener("message", on); res(e.data);
+      }
+      window.addEventListener("message", on);
+      window.postMessage({ type: "STIKDESI_NATIVE", id, ...files }, location.origin);
+    });
+  }
+
   async function sendAsSticker(s) {
     const box = document.querySelector('footer div[contenteditable="true"]');
     if (!box) { message("Pehle koi chat kholo, phir sticker chuno."); return; }
-    message("Sticker bana raha hoon…");
+    message("Sound sticker bhej raha hoon…");
+    try {
+      const files = await waFiles(s);
+      if (files) {
+        const r = await sendNative(files);
+        if (r.ok) { message("✅ Sound sticker bhej diya."); panel.style.display = "none"; return; }
+        message("Sound wala sticker nahi gaya (" + r.error + "), bina sound ke bhej raha hoon…");
+      }
+    } catch (e) { message("Sound wala sticker nahi bana, bina sound ke bhej raha hoon…"); }
     let file;
     try {
-      const webp = s.isGif ? await gifToWebp(s) : await makeWebpSticker(await videoSrc(s));
+      const webp = s.stickerUrl ? await (await fetch(s.stickerUrl)).blob() : s.isGif ? await gifToWebp(s) : await makeWebpSticker(await videoSrc(s));
       file = new File([webp], "sticker.webp", { type: "image/webp" });
     } catch { message("Sticker nahi bana, dobara try karo."); return; }
     const t = new DataTransfer(); t.items.add(file);

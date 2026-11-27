@@ -3,7 +3,7 @@ import { decompressFrames, parseGIF } from "gifuct-js";
 type Frame = { canvas: HTMLCanvasElement; delay: number };
 
 // Decode every GIF frame into full canvases (handles patches + disposal).
-async function decodeGif(url: string): Promise<{ frames: Frame[]; width: number; height: number }> {
+export async function decodeGif(url: string): Promise<{ frames: Frame[]; width: number; height: number }> {
   const buf = await (await fetch(url)).arrayBuffer();
   const gif = parseGIF(buf);
   const raw = decompressFrames(gif, true);
