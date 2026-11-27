@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { searchStickers } from "@/lib/stickers.functions";
+import { searchStickers, makeWhatsAppSticker, type Sticker } from "@/lib/stickers.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,18 +52,34 @@ function Index() {
         )}
         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {search.data?.map((s) => (
-            <a
-              key={s.id}
-              href={s.image}
-              target="_blank"
-              rel="noreferrer"
-              className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop transition hover:-rotate-2"
-            >
-              <img src={s.image} alt={s.title} loading="lazy" className="aspect-square w-full object-cover" />
-            </a>
+            <StickerCard key={s.id} s={s} />
           ))}
         </div>
       </div>
     </main>
+  );
+}
+
+function StickerCard({ s }: { s: Sticker }) {
+  const make = useMutation({
+    mutationFn: () => makeWhatsAppSticker({ data: { imageUrl: s.image } }),
+    onSuccess: (dataUrl) => {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `sticker-${s.id.slice(0, 8)}.webp`;
+      a.click();
+    },
+  });
+  return (
+    <div className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
+      <img src={s.image} alt={s.title} loading="lazy" className="aspect-square w-full object-cover" />
+      <button
+        onClick={() => make.mutate()}
+        disabled={make.isPending}
+        className="w-full border-t-2 border-foreground bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+      >
+        {make.isPending ? "Making..." : make.isError ? "Failed, retry" : "WhatsApp sticker ⬇"}
+      </button>
+    </div>
   );
 }
