@@ -20,6 +20,9 @@ export type Database = {
           gif_url: string
           id: string
           mime: string
+          sound_path: string | null
+          sound_seconds: number | null
+          sticker_path: string | null
           title: string
           user_id: string
           video_path: string
@@ -29,6 +32,9 @@ export type Database = {
           gif_url?: string
           id?: string
           mime?: string
+          sound_path?: string | null
+          sound_seconds?: number | null
+          sticker_path?: string | null
           title: string
           user_id?: string
           video_path: string
@@ -38,6 +44,9 @@ export type Database = {
           gif_url?: string
           id?: string
           mime?: string
+          sound_path?: string | null
+          sound_seconds?: number | null
+          sticker_path?: string | null
           title?: string
           user_id?: string
           video_path?: string
@@ -50,6 +59,9 @@ export type Database = {
           gif_url: string
           id: string
           language: string
+          sound_path: string | null
+          sound_seconds: number | null
+          sticker_path: string | null
           title: string
           video_url: string | null
         }
@@ -58,6 +70,9 @@ export type Database = {
           gif_url: string
           id?: string
           language?: string
+          sound_path?: string | null
+          sound_seconds?: number | null
+          sticker_path?: string | null
           title: string
           video_url?: string | null
         }
@@ -66,6 +81,9 @@ export type Database = {
           gif_url?: string
           id?: string
           language?: string
+          sound_path?: string | null
+          sound_seconds?: number | null
+          sticker_path?: string | null
           title?: string
           video_url?: string | null
         }

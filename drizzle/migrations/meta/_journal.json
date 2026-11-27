@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795797428495,
+      "tag": "0000_add_native_sound_sticker_files",
+      "breakpoints": true
+    }
+  ]
 }
