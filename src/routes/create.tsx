@@ -46,7 +46,19 @@ function CreatePage() {
   const [picker, setPicker] = useState(false);
   const [duration, setDuration] = useState(0);
   const [start, setStart] = useState(0);
-  const [seconds, setSeconds] = useState<5 | 10>(5);
+  const [end, setEnd] = useState(5);
+  const [previewing, setPreviewing] = useState(false);
+  const seconds = Math.max(0.5, end - start);
+
+  const previewCut = () => {
+    const srcUrl = pack ? soundUrl(pack.path) : file ? URL.createObjectURL(file) : "";
+    if (!srcUrl) return;
+    const a = new Audio(srcUrl);
+    a.currentTime = start;
+    setPreviewing(true);
+    void a.play();
+    setTimeout(() => { a.pause(); setPreviewing(false); }, seconds * 1000);
+  };
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
 
@@ -91,7 +103,7 @@ function CreatePage() {
           onSelect={(snd) => {
             setPack(snd); setFile(null); setStart(0); setResult(null); setPicker(false);
             const a = new Audio(soundUrl(snd.path));
-            a.onloadedmetadata = () => setDuration(a.duration || 0);
+            a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); };
           }}
         />
       )}
@@ -100,9 +112,9 @@ function CreatePage() {
         <div>
           <div className="overflow-hidden rounded-3xl border-2 border-foreground bg-card shadow-pop">
             {result ? (
-              <video src={result.url} controls autoPlay loop className="aspect-square w-full bg-card" />
+              <video src={result.url} autoPlay loop playsInline onClick={(e) => { e.currentTarget.muted = false; void e.currentTarget.play(); }} className="aspect-square w-full cursor-pointer bg-card" />
             ) : (
-              <img src={s.preview || s.gif} alt={title} className="aspect-square w-full object-contain" />
+              <img src={previewing ? s.gif : s.preview || s.gif} alt={title} className="aspect-square w-full object-contain" />
             )}
           </div>
           <button onClick={() => wa.mutate()} disabled={wa.isPending} className="mt-3 w-full rounded-full border-2 border-foreground bg-card py-2 text-sm font-semibold text-foreground disabled:opacity-60">
@@ -131,24 +143,35 @@ function CreatePage() {
               <input type="file" accept="audio/*,video/*" onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 setFile(f); setPack(null); setStart(0); setResult(null);
-                if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => setDuration(a.duration || 0); }
+                if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); }; }
               }} className="mt-2 w-full text-sm text-foreground" />
               {file && !pack && <p className="mt-1 text-foreground">Using: {file.name}</p>}
             </details>
           </div>
 
           {(file || pack) && duration > 0 && (
-            <label className="block">
-              <span className="text-sm font-semibold text-foreground">Start at {start.toFixed(1)}s</span>
-              <input type="range" min={0} max={Math.max(0, duration - 1)} step={0.1} value={start} onChange={(e) => setStart(Number(e.target.value))} className="mt-1 w-full accent-primary" />
-            </label>
+            <div className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground">✂️ Cut the sound</span>
+                <span className="text-sm text-muted-foreground">{start.toFixed(1)}s → {end.toFixed(1)}s ({seconds.toFixed(1)}s)</span>
+              </div>
+              <label className="block text-sm text-foreground">From
+                <input aria-label="Cut from" type="range" min={0} max={Math.max(0, duration - 0.5)} step={0.1} value={start}
+                  onChange={(e) => { const v = Number(e.target.value); setStart(v); if (end <= v + 0.5 || end - v > 10) setEnd(Math.min(duration, v + Math.min(10, Math.max(0.5, end - start)))); }}
+                  className="mt-1 w-full accent-primary" />
+              </label>
+              <label className="block text-sm text-foreground">To
+                <input aria-label="Cut to" type="range" min={0.5} max={duration} step={0.1} value={end}
+                  onChange={(e) => { const v = Number(e.target.value); setEnd(v); if (v <= start + 0.5) setStart(Math.max(0, v - 0.5)); else if (v - start > 10) setStart(v - 10); }}
+                  className="mt-1 w-full accent-primary" />
+              </label>
+              <p className="text-xs text-muted-foreground">Max 10 seconds. Total sound: {duration.toFixed(1)}s</p>
+              <button type="button" onClick={previewCut} disabled={previewing}
+                className="w-full rounded-full border-2 border-foreground bg-secondary py-2 text-sm font-semibold text-foreground disabled:opacity-60">
+                {previewing ? "🔊 Playing..." : "▶ Preview with GIF"}
+              </button>
+            </div>
           )}
-
-          <div className="flex w-48 overflow-hidden rounded-full border-2 border-foreground">
-            {([5, 10] as const).map((n) => (
-              <button key={n} type="button" onClick={() => setSeconds(n)} className={`flex-1 py-2 text-sm font-semibold ${seconds === n ? "bg-foreground text-background" : "bg-card text-foreground"}`}>{n}s</button>
-            ))}
-          </div>
 
           <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} className="h-4 w-4 accent-primary" />
@@ -157,7 +180,7 @@ function CreatePage() {
 
           <button onClick={() => create.mutate()} disabled={create.isPending || !(file || pack) || title.trim().length < 2}
             className="w-full rounded-full border-2 border-foreground bg-primary py-3 text-lg font-bold text-primary-foreground shadow-pop disabled:opacity-50">
-            {create.isPending ? `Creating... (${seconds}s)` : "Create"}
+            {create.isPending ? `Creating... (${seconds.toFixed(1)}s)` : "Create"}
           </button>
           {create.isError && <p className="text-sm text-destructive">{(create.error as Error).message || "Something went wrong"}</p>}
 
