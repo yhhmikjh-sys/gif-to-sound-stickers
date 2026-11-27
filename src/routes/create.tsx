@@ -5,7 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { makeSoundSticker, gifSeconds, WHATSAPP_GIF_MAX } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
-import { sendToWhatsApp, WEB_HINT } from "@/lib/send-to-whatsapp";
+import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
 import { SoundGif } from "@/components/SoundGif";
@@ -64,6 +64,7 @@ function CreatePage() {
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
 
+  useEffect(() => { if (result) void prepareShare(result.url, title).catch(() => {}); }, [result]);
   const create = useMutation({
     mutationFn: async () => {
       let audio: ArrayBuffer;

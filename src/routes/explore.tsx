@@ -5,7 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { SearchBar } from "@/components/SearchBar";
 import { listPublicStickers } from "@/lib/public-stickers.functions";
 import { SoundGif } from "@/components/SoundGif";
-import { sendToWhatsApp, WEB_HINT } from "@/lib/send-to-whatsapp";
+import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
 
 export const Route = createFileRoute("/explore")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s["q"] === "string" ? s["q"] : "" }),
@@ -53,7 +53,7 @@ function Explore() {
           {items.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
               {s.video_url ? (
-                <SoundGif url={s.video_url} poster={s.gif_url} startMuted />
+                <div onPointerEnter={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onTouchStart={() => void prepareShare(s.video_url!, s.title).catch(() => {})}><SoundGif url={s.video_url} poster={s.gif_url} startMuted /></div>
               ) : (
                 <img src={s.gif_url} alt={s.title} loading="lazy" className="aspect-square w-full object-contain" />
               )}
@@ -61,7 +61,7 @@ function Explore() {
                 <p className="truncate text-sm font-semibold text-foreground">{s.title}</p>
                 <p className="text-xs capitalize text-muted-foreground">{s.language}</p>
                 {s.video_url && (
-                  <button type="button" onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch(() => {})}
+                  <button type="button" onPointerDown={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch(() => {})}
                     className="mt-2 w-full rounded-full border-2 border-foreground bg-[#25D366] py-1 text-xs font-semibold text-white">
                     📤 Send on WhatsApp
                   </button>
