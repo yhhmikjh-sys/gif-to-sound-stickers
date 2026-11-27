@@ -36,7 +36,7 @@
     if (!blobCache.has(src)) blobCache.set(src, fetch(src).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => URL.createObjectURL(b)));
     return blobCache.get(src);
   }
-  async function videoSrc(s) { return s.dataUrl ? s.dataUrl : blobUrl(s.url); }
+  async function videoSrc(s) { return blobUrl(s.dataUrl || s.url); }
   async function showVideoFrame(img, s) {
     try {
       const v = document.createElement("video"); v.muted = true; v.src = await videoSrc(s);
