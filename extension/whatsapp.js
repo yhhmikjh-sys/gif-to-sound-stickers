@@ -1,23 +1,33 @@
-// Runs on WhatsApp Web: a floating panel with saved stickers. Clicking one drops it into the open chat;
-// WhatsApp then shows its normal preview where you press Send.
+// WhatsApp Web panel: Public shows every published sticker; Viewer shows the signed-in user's and locally saved stickers.
 (() => {
   const btn = document.createElement("button");
   btn.textContent = "🔊 StikDesi";
   Object.assign(btn.style, { position: "fixed", right: "20px", bottom: "90px", zIndex: 99999, padding: "10px 16px", borderRadius: "999px", border: "2px solid #111", background: "#25D366", color: "#fff", fontWeight: "700", cursor: "pointer", boxShadow: "3px 3px 0 #111" });
   const panel = document.createElement("div");
-  Object.assign(panel.style, { position: "fixed", right: "20px", bottom: "140px", zIndex: 99999, width: "320px", maxHeight: "60vh", overflow: "auto", background: "#fff", color: "#111", border: "2px solid #111", borderRadius: "16px", padding: "10px", display: "none", fontFamily: "sans-serif", boxShadow: "4px 4px 0 #111" });
+  Object.assign(panel.style, { position: "fixed", right: "20px", bottom: "140px", zIndex: 99999, width: "330px", maxHeight: "65vh", overflow: "auto", background: "#fff", color: "#111", border: "2px solid #111", borderRadius: "16px", padding: "12px", display: "none", fontFamily: "sans-serif", boxShadow: "4px 4px 0 #111" });
+  panel.innerHTML = '<b style="font-size:16px">Sound stickers</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0 8px"><button data-tab="public">Public</button><button data-tab="viewer">Viewer</button></div><p data-msg style="font-size:12px;color:#555;margin:4px 0 8px"></p><div data-list></div>';
   document.body.append(btn, panel);
 
-  const toast = (t) => { const p = panel.querySelector("[data-msg]"); if (p) p.textContent = t; };
+  let activeTab = "viewer";
+  let renderId = 0;
+  const publicState = { items: [], nextOffset: 0, loaded: false, loading: false };
+  const message = (text) => { panel.querySelector("[data-msg]").textContent = text; };
+  const list = () => panel.querySelector("[data-list]");
 
-  // After the paste, WhatsApp opens its preview; press its Send button for the user.
+  function paintTabs() {
+    for (const tab of panel.querySelectorAll("[data-tab]")) {
+      const active = tab.dataset.tab === activeTab;
+      Object.assign(tab.style, { padding: "8px", border: "2px solid #111", borderRadius: "999px", background: active ? "#25D366" : "#fff", color: active ? "#fff" : "#111", fontWeight: "700", cursor: "pointer" });
+    }
+  }
+
   function autoSend() {
-    const t0 = Date.now();
-    const iv = setInterval(() => {
+    const started = Date.now();
+    const interval = setInterval(() => {
       const icon = [...document.querySelectorAll('span[data-icon="send"], span[data-icon="wds-ic-send-filled"]')].find((el) => !el.closest("footer"));
-      const btn = icon?.closest('div[role="button"], button') || document.querySelector('div[role="button"][aria-label="Send"]:not(footer *)');
-      if (btn) { clearInterval(iv); btn.click(); }
-      else if (Date.now() - t0 > 15000) clearInterval(iv);
+      const send = icon?.closest('div[role="button"], button') || document.querySelector('div[role="button"][aria-label="Send"]:not(footer *)');
+      if (send) { clearInterval(interval); send.click(); }
+      else if (Date.now() - started > 15000) clearInterval(interval);
     }, 300);
   }
 
@@ -27,57 +37,115 @@
       const mime = head.slice(5, head.indexOf(";"));
       return new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], `${s.title}.${mime.includes("webm") ? "webm" : "mp4"}`, { type: mime });
     }
-    const b = await (await fetch(s.url)).blob();
-    return new File([b], `${s.title}.${(s.mime || b.type).includes("webm") ? "webm" : "mp4"}`, { type: s.mime || b.type || "video/mp4" });
+    const blob = await (await fetch(s.url)).blob();
+    const mime = s.mime || blob.type || (s.isGif ? "image/gif" : "video/mp4");
+    const extension = mime.includes("webm") ? "webm" : mime.includes("gif") ? "gif" : "mp4";
+    return new File([blob], `${s.title}.${extension}`, { type: mime });
   }
 
   async function dropIntoChat(s) {
     const box = document.querySelector('footer div[contenteditable="true"]');
-    if (!box) { toast("Pehle koi chat kholo, phir sticker chuno."); return; }
-    toast("Bhej raha hoon…");
+    if (!box) { message("Pehle koi chat kholo, phir sticker chuno."); return; }
+    message("Bhej raha hoon…");
     let file;
-    try { file = await toFile(s); } catch { toast("Sticker load nahi hua, dobara try karo."); return; }
-    const dt = new DataTransfer();
-    dt.items.add(file);
+    try { file = await toFile(s); } catch { message("Sticker load nahi hua, dobara try karo."); return; }
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
     box.focus();
-    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true, cancelable: true }));
     panel.style.display = "none";
     autoSend();
   }
 
-  async function render() {
-    let mine = [], signedIn = true;
-    try { mine = await sbMyStickers(); } catch (e) { signedIn = false; }
-    chrome.storage.local.get({ stickers: [] }, ({ stickers: local }) => {
-      const stickers = [...mine, ...local];
-      panel.innerHTML = '<b>Sound stickers</b><p data-msg style="font-size:12px;color:#555;margin:4px 0 8px">Chat kholo → sticker par click → apne aap send ho jaayega</p>';
-      if (!signedIn) panel.insertAdjacentHTML("beforeend", '<p style="font-size:12px;color:#b00">Apne account ke stickers ke liye extension icon dabake Sign in karo.</p>');
-      if (!stickers.length) panel.insertAdjacentHTML("beforeend", '<p style="font-size:13px">Abhi koi sticker nahi. StikDesi website par sign in karke sticker banao.</p>');
-      const grid = document.createElement("div");
-      Object.assign(grid.style, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" });
-      for (const s of stickers) {
-        const card = document.createElement("div");
-        Object.assign(card.style, { border: "1px solid #ddd", borderRadius: "10px", overflow: "hidden", position: "relative" });
-        const v = document.createElement("video");
-        Object.assign(v, { src: s.dataUrl || s.url, muted: true, loop: true, autoplay: true, playsInline: true });
-        Object.assign(v.style, { width: "100%", aspectRatio: "1", objectFit: "contain", cursor: "pointer", display: "block", background: "#fff" });
-        v.title = s.title;
-        v.onclick = () => dropIntoChat(s);
+  function addGrid(stickers, local = []) {
+    if (!stickers.length) {
+      const empty = document.createElement("p");
+      empty.style.fontSize = "13px";
+      empty.textContent = activeTab === "public" ? "Abhi koi public sticker nahi." : "Abhi koi sticker nahi. Website par sign in karke sticker banao.";
+      list().append(empty);
+      return;
+    }
+    const grid = document.createElement("div");
+    Object.assign(grid.style, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" });
+    for (const s of stickers) {
+      const card = document.createElement("div");
+      Object.assign(card.style, { border: "1px solid #ddd", borderRadius: "10px", overflow: "hidden", position: "relative" });
+      const media = document.createElement(s.isGif ? "img" : "video");
+      media.src = s.dataUrl || s.url;
+      if (!s.isGif) Object.assign(media, { muted: true, loop: true, autoplay: true, playsInline: true });
+      Object.assign(media.style, { width: "100%", aspectRatio: "1", objectFit: "contain", cursor: "pointer", display: "block", background: "#fff" });
+      media.title = s.title;
+      media.onclick = () => dropIntoChat(s);
+      const title = document.createElement("div");
+      title.textContent = s.title;
+      Object.assign(title.style, { fontSize: "11px", padding: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+      card.append(media, title);
+      if (s.dataUrl) {
         const del = document.createElement("button");
         del.textContent = "✕";
+        del.setAttribute("aria-label", "Remove local sticker");
         Object.assign(del.style, { position: "absolute", top: "4px", right: "4px", border: "none", borderRadius: "999px", background: "#0008", color: "#fff", cursor: "pointer" });
         del.onclick = () => chrome.storage.local.set({ stickers: local.filter((x) => x.id !== s.id) }, render);
-        if (!s.dataUrl) del.style.display = "none";
-        const t = document.createElement("div");
-        t.textContent = s.title;
-        Object.assign(t.style, { fontSize: "11px", padding: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-        card.append(v, del, t);
-        grid.append(card);
+        card.append(del);
       }
-      panel.append(grid);
-    });
+      grid.append(card);
+    }
+    list().append(grid);
   }
 
+  async function renderViewer(id) {
+    let mine = [];
+    let signedIn = true;
+    try { mine = await sbMyStickers(); } catch { signedIn = false; }
+    const { stickers: local } = await chrome.storage.local.get({ stickers: [] });
+    if (id !== renderId) return;
+    message(signedIn ? "Aapke banaye stickers — click karte hi send hoga." : "Local stickers dikhte hain. Account stickers ke liye extension icon se Sign in karo.");
+    addGrid([...mine, ...local], local);
+  }
+
+  function paintPublic() {
+    list().innerHTML = "";
+    addGrid(publicState.items);
+    if (publicState.nextOffset !== null) {
+      const more = document.createElement("button");
+      more.textContent = publicState.loading ? "Loading…" : "More public stickers";
+      more.disabled = publicState.loading;
+      Object.assign(more.style, { width: "100%", marginTop: "10px", padding: "8px", border: "2px solid #111", borderRadius: "999px", background: "#fff", fontWeight: "700", cursor: "pointer" });
+      more.onclick = () => loadPublic(false);
+      list().append(more);
+    }
+  }
+
+  async function loadPublic(reset) {
+    if (publicState.loading) return;
+    if (reset) { publicState.items = []; publicState.nextOffset = 0; publicState.loaded = false; }
+    publicState.loading = true;
+    message("Published stickers — kisi bhi chat mein bhejo.");
+    paintPublic();
+    try {
+      const result = await sbPublicStickers(publicState.nextOffset || 0);
+      publicState.items.push(...result.items);
+      publicState.nextOffset = result.nextOffset;
+      publicState.loaded = true;
+    } catch (e) {
+      message(e.message || "Public stickers load nahi hue.");
+    } finally {
+      publicState.loading = false;
+      if (activeTab === "public") paintPublic();
+    }
+  }
+
+  function render() {
+    const id = ++renderId;
+    paintTabs();
+    list().innerHTML = "";
+    if (activeTab === "public") {
+      if (publicState.loaded) { message("Published stickers — kisi bhi chat mein bhejo."); paintPublic(); }
+      else void loadPublic(true);
+    } else void renderViewer(id);
+  }
+
+  for (const tab of panel.querySelectorAll("[data-tab]")) tab.onclick = () => { activeTab = tab.dataset.tab; render(); };
   btn.onclick = () => { const open = panel.style.display === "none"; panel.style.display = open ? "block" : "none"; if (open) render(); };
-  chrome.storage.onChanged.addListener(() => { if (panel.style.display !== "none") void render(); });
+  chrome.storage.onChanged.addListener(() => { if (panel.style.display !== "none" && activeTab === "viewer") render(); });
 })();

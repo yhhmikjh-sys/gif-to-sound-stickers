@@ -27,7 +27,8 @@ const steps = [
   "Load unpacked dabao aur unzip kiya hua folder chuno. Puzzle 🧩 menu mein StikDesi Sender ko pin 📌 karo.",
   "Extension icon dabao aur wahi email-password se Sign in karo.",
   "Website par sticker banao — signed in ho to woh apne aap aapke account mein save hota hai.",
-  "web.whatsapp.com kholo, chat kholo, neeche daayein 🔊 StikDesi dabao, sticker par click karo — apne aap send ho jaata hai.",
+  "web.whatsapp.com kholo aur neeche daayein 🔊 StikDesi dabao. Viewer mein aapke banaye stickers aur Public mein sabke published stickers milenge.",
+  "Chat kholo, kisi sticker par click karo — WhatsApp preview ke baad woh apne aap send ho jaata hai.",
 ];
 
 function ExtensionPage() {
