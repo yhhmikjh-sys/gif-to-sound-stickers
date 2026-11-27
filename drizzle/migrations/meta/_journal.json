@@ -1,20 +1,5 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1795792511712,
-      "tag": "0000_create_my_stickers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1795792978542,
-      "tag": "0001_allow_public_sticker_file_reads",
-      "breakpoints": true
-    }
-  ]
+  "entries": []
 }
