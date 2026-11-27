@@ -10,6 +10,8 @@ import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
 import { SoundGif } from "@/components/SoundGif";
 import { ExtensionButton } from "@/components/ExtensionButton";
+import { useUser } from "@/hooks/use-user";
+import { saveToMyStickers } from "@/lib/my-stickers";
 
 type S = { gif: string; preview: string; title: string; lang: string };
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -62,8 +64,9 @@ function CreatePage() {
   const fitEnd = (d: number) => Math.min(d, gifLen, WHATSAPP_GIF_MAX);
   useEffect(() => { if (duration > 0 && Number.isFinite(duration)) { setStart(0); setEnd(Math.min(duration, gifLen)); } }, [gifLen]);
 
+  const user = useUser();
   const [isPublic, setIsPublic] = useState(true);
-  const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; mime: string; saved: boolean; mine: boolean } | null>(null);
 
   useEffect(() => { if (result) void prepareShare(result.url, title).catch(() => {}); }, [result]);
   const create = useMutation({
@@ -81,7 +84,9 @@ function CreatePage() {
         await savePublicSticker({ data: { title, language: s.lang || "all", gifUrl: s.gif, videoBase64: await toBase64(blob), mime } });
         saved = true;
       }
-      return { url: URL.createObjectURL(blob), mime, saved };
+      let mine = false;
+      if (user) { await saveToMyStickers(user.id, blob, mime, title, s.gif); mine = true; }
+      return { url: URL.createObjectURL(blob), mime, saved, mine };
     },
     onSuccess: setResult,
   });
@@ -179,7 +184,8 @@ function CreatePage() {
 
           {result && (
             <div className="rounded-2xl border-2 border-foreground bg-card p-4">
-              <p className="font-semibold text-foreground">Done! {result.saved && "Saved to public stickers."}</p>
+              <p className="font-semibold text-foreground">Done! {result.saved && "Saved to public stickers."} {result.mine ? "Aapke account mein bhi save hua — extension mein dikhega." : ""}</p>
+              {!result.mine && <p className="mt-1 text-sm"><Link to="/auth" className="font-semibold text-foreground underline">Sign in</Link> <span className="text-muted-foreground">karo to agle stickers account mein save honge.</span></p>}
               <p className="mt-1 text-sm text-muted-foreground">
                 {result.mime === "video/mp4"
                   ? "Tap Send on WhatsApp → choose WhatsApp or WhatsApp Business → pick the chat → Send. It plays as a GIF with a 🔇 sound button."

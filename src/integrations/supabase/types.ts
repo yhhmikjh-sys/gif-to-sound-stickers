@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      my_stickers: {
+        Row: {
+          created_at: string
+          gif_url: string
+          id: string
+          mime: string
+          title: string
+          user_id: string
+          video_path: string
+        }
+        Insert: {
+          created_at?: string
+          gif_url?: string
+          id?: string
+          mime?: string
+          title: string
+          user_id?: string
+          video_path: string
+        }
+        Update: {
+          created_at?: string
+          gif_url?: string
+          id?: string
+          mime?: string
+          title?: string
+          user_id?: string
+          video_path?: string
+        }
+        Relationships: []
+      }
       public_stickers: {
         Row: {
           created_at: string

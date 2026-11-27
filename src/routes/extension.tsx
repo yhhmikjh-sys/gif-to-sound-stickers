@@ -21,13 +21,13 @@ function download() {
 }
 
 const steps = [
+  "Website par upar Sign in dabao aur account banao (Sign up).",
   "Neeche wala button dabake ZIP download karo aur unzip karo.",
-  "Chrome mein chrome://extensions kholo (Edge mein edge://extensions).",
-  "Upar daayein Developer mode on karo.",
-  "Load unpacked dabao aur unzip kiya hua folder chuno.",
-  "StikDesi ka page reload karo. Sticker banao aur 🧩 Send to extension dabao.",
-  "web.whatsapp.com kholo, chat kholo, neeche daayein 🔊 StikDesi dabao, sticker chuno.",
-  "WhatsApp preview mein GIF switch on karo aur Send dabao.",
+  "Chrome mein chrome://extensions kholo (Edge mein edge://extensions), Developer mode on karo.",
+  "Load unpacked dabao aur unzip kiya hua folder chuno. Puzzle 🧩 menu mein StikDesi Sender ko pin 📌 karo.",
+  "Extension icon dabao aur wahi email-password se Sign in karo.",
+  "Website par sticker banao — signed in ho to woh apne aap aapke account mein save hota hai.",
+  "web.whatsapp.com kholo, chat kholo, neeche daayein 🔊 StikDesi dabao, sticker par click karo — apne aap send ho jaata hai.",
 ];
 
 function ExtensionPage() {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "StikDesi Sender",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Send StikDesi sound stickers from WhatsApp Web.",
   "permissions": [
     "storage",
@@ -27,6 +27,7 @@
         "https://web.whatsapp.com/*"
       ],
       "js": [
+        "api.js",
         "whatsapp.js"
       ],
       "run_at": "document_idle"
@@ -36,5 +37,8 @@
     "default_popup": "popup.html",
     "default_title": "StikDesi Sender",
     "default_icon": "icon.png"
-  }
+  },
+  "host_permissions": [
+    "https://c--70890fbc-f582-4dd0-8c61-da9b7b9595a9-prod.lovable.cloud/*"
+  ]
 }

@@ -1,4 +1,15 @@
-chrome.storage.local.get({ stickers: [] }, ({ stickers }) => {
-  document.getElementById("count").textContent = stickers.length ? `${stickers.length} sticker extension mein save hain.` : "Abhi koi sticker save nahi hai.";
-});
-document.getElementById("wa").onclick = () => chrome.tabs.create({ url: "https://web.whatsapp.com/" });
+const $ = (id) => document.getElementById(id);
+const msg = (t) => ($("msg").textContent = t);
+async function show() {
+  const s = await sbSession();
+  $("out").hidden = !!s; $("inside").hidden = !s;
+  if (!s) return;
+  $("who").textContent = `Signed in: ${s.email || ""}`;
+  try { const list = await sbMyStickers(); $("count").textContent = list.length ? `${list.length} sticker aapke account mein hain.` : "Abhi koi sticker nahi. Website par sign in karke sticker banao."; }
+  catch (e) { if (e.message === "signed-out") return show(); $("count").textContent = e.message; }
+}
+$("in").onclick = async () => { msg(""); try { await sbSignIn($("email").value, $("pw").value); show(); } catch (e) { msg(e.message); } };
+$("up").onclick = async () => { msg(""); try { (await sbSignUp($("email").value, $("pw").value)) ? show() : msg("Email check karo, link dabake confirm karo, phir Sign in."); } catch (e) { msg(e.message); } };
+$("out-btn").onclick = async () => { await sbSignOut(); show(); };
+$("wa").onclick = () => chrome.tabs.create({ url: "https://web.whatsapp.com/" });
+show();
