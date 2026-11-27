@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { makeSoundSticker } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
+import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 
 type S = { gif: string; preview: string; title: string; lang: string };
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -41,6 +42,8 @@ function CreatePage() {
   const s = Route.useSearch();
   const [title, setTitle] = useState(s.title.replace(/ GIF$| Sticker$/i, "").slice(0, 80));
   const [file, setFile] = useState<File | null>(null);
+  const [pack, setPack] = useState<{ title: string; path: string } | null>(null);
+  const [picker, setPicker] = useState(false);
   const [duration, setDuration] = useState(0);
   const [start, setStart] = useState(0);
   const [seconds, setSeconds] = useState<5 | 10>(5);
@@ -49,8 +52,14 @@ function CreatePage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Pick a sound first");
-      const { blob, mime } = await makeSoundSticker({ gifUrl: s.gif, audio: await file.arrayBuffer(), start, seconds });
+      let audio: ArrayBuffer;
+      if (pack) {
+        const r = await fetch(soundUrl(pack.path));
+        if (!r.ok) throw new Error("Couldn't load the sound");
+        audio = await r.arrayBuffer();
+      } else if (file) audio = await file.arrayBuffer();
+      else throw new Error("Pick a sound first");
+      const { blob, mime } = await makeSoundSticker({ gifUrl: s.gif, audio, start, seconds });
       let saved = false;
       if (isPublic) {
         await savePublicSticker({ data: { title, language: s.lang || "all", gifUrl: s.gif, videoBase64: await toBase64(blob), mime } });
@@ -75,6 +84,17 @@ function CreatePage() {
 
   return (
     <main className="min-h-screen pb-16">
+      {picker && (
+        <SoundPicker
+          initialQuery={title.split(" ").slice(0, 2).join(" ")}
+          onClose={() => setPicker(false)}
+          onSelect={(snd) => {
+            setPack(snd); setFile(null); setStart(0); setResult(null); setPicker(false);
+            const a = new Audio(soundUrl(snd.path));
+            a.onloadedmetadata = () => setDuration(a.duration || 0);
+          }}
+        />
+      )}
       <TopNav />
       <div className="mx-auto grid max-w-5xl gap-8 px-4 pt-8 md:grid-cols-2">
         <div>
@@ -101,17 +121,23 @@ function CreatePage() {
 
           <div>
             <span className="text-sm font-semibold text-foreground">Sound</span>
-            <div className="mt-1 rounded-2xl border-2 border-dashed border-foreground bg-card p-4">
+            <button type="button" onClick={() => setPicker(true)}
+              className="mt-1 flex w-full items-center justify-between rounded-2xl border-2 border-foreground bg-primary px-4 py-3 font-semibold text-primary-foreground shadow-pop">
+              <span className="truncate">{pack ? `🔊 ${pack.title}` : "Select sound package"}</span>
+              <span>{pack ? "Change" : "→"}</span>
+            </button>
+            <details className="mt-2 text-sm text-muted-foreground">
+              <summary className="cursor-pointer">Or use a sound from your phone</summary>
               <input type="file" accept="audio/*,video/*" onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
-                setFile(f); setStart(0); setResult(null);
+                setFile(f); setPack(null); setStart(0); setResult(null);
                 if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => setDuration(a.duration || 0); }
-              }} className="w-full text-sm text-foreground" />
-              <p className="mt-2 text-xs text-muted-foreground">Voice packages are coming soon. For now pick an MP3 / audio from your phone.</p>
-            </div>
+              }} className="mt-2 w-full text-sm text-foreground" />
+              {file && !pack && <p className="mt-1 text-foreground">Using: {file.name}</p>}
+            </details>
           </div>
 
-          {file && duration > 0 && (
+          {(file || pack) && duration > 0 && (
             <label className="block">
               <span className="text-sm font-semibold text-foreground">Start at {start.toFixed(1)}s</span>
               <input type="range" min={0} max={Math.max(0, duration - 1)} step={0.1} value={start} onChange={(e) => setStart(Number(e.target.value))} className="mt-1 w-full accent-primary" />
@@ -129,7 +155,7 @@ function CreatePage() {
             Save to public stickers so everyone can find it
           </label>
 
-          <button onClick={() => create.mutate()} disabled={create.isPending || !file || title.trim().length < 2}
+          <button onClick={() => create.mutate()} disabled={create.isPending || !(file || pack) || title.trim().length < 2}
             className="w-full rounded-full border-2 border-foreground bg-primary py-3 text-lg font-bold text-primary-foreground shadow-pop disabled:opacity-50">
             {create.isPending ? `Creating... (${seconds}s)` : "Create"}
           </button>
