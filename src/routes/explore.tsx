@@ -63,7 +63,7 @@ function Explore() {
                 <p className="truncate text-sm font-semibold text-foreground">{s.title}</p>
                 <p className="text-xs capitalize text-muted-foreground">{s.language}</p>
                 {s.video_url && (
-                  <button type="button" onPointerDown={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch(() => {})}
+                  <button type="button" onPointerDown={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch((e: Error) => e.name !== "AbortError" && alert(e.message))}
                     className="mt-2 w-full rounded-full border-2 border-foreground bg-[#25D366] py-1 text-xs font-semibold text-white">
                     📤 Share sticker
                   </button>
