@@ -203,7 +203,7 @@ export function PrivateVideoCreator({ userId }: { userId: string }) {
           {result && (
             <div className="space-y-3 border-t border-border pt-4">
               <p className="font-semibold text-foreground">Saved privately to your account.</p>
-              {result.stickerUrl ? <WhatsAppAppButtons stickerUrl={result.stickerUrl} title={title} /> : <p className="text-sm text-destructive">This browser could not make the sticker file. The video was saved, but mobile sticker sharing is unavailable.</p>}
+              {result.stickerUrl ? <WhatsAppAppButtons url={result.videoUrl} stickerUrl={result.stickerUrl} title={title} /> : <p className="text-sm text-destructive">This browser could not make the sticker file. The video was saved, but mobile sticker sharing is unavailable.</p>}
               {result.stickerUrl && <Button type="button" variant="outline" onClick={sendSticker}>Share sticker</Button>}
               {shareMessage && <p role="status" className="text-sm text-muted-foreground">{shareMessage}</p>}
               <p className="text-sm text-muted-foreground">The sound stays with the saved version for the desktop extension; phone sharing sends the animated sticker file without separate audio.</p>
