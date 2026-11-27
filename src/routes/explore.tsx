@@ -7,7 +7,7 @@ import { listPublicStickers } from "@/lib/public-stickers.functions";
 import { SoundGif } from "@/components/SoundGif";
 import { WhatsAppAppButtons } from "@/components/WhatsAppAppButtons";
 import { ExtensionButton } from "@/components/ExtensionButton";
-import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
+import { sendToWhatsApp, prepareShare, phoneShareTarget, WEB_HINT } from "@/lib/send-to-whatsapp";
 
 export const Route = createFileRoute("/explore")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s["q"] === "string" ? s["q"] : "" }),
@@ -63,7 +63,7 @@ function Explore() {
                 <p className="truncate text-sm font-semibold text-foreground">{s.title}</p>
                 <p className="text-xs capitalize text-muted-foreground">{s.language}</p>
                 {s.video_url && (
-                  <button type="button" onPointerDown={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onClick={() => void sendToWhatsApp(s.video_url!, s.title).then((r) => r === "web" && alert(WEB_HINT)).catch((e: Error) => e.name !== "AbortError" && alert(e.message))}
+                  <button type="button" onPointerDown={() => { const t = phoneShareTarget(s.video_url!, s.sticker_url); void prepareShare(t.url, s.title, t.kind).catch(() => {}); }} onClick={() => { const t = phoneShareTarget(s.video_url!, s.sticker_url); void sendToWhatsApp(t.url, s.title, t.kind).then((r) => r === "web" && alert(WEB_HINT)).catch((e: Error) => e.name !== "AbortError" && alert(e.message)); }}
                     className="mt-2 w-full rounded-full border-2 border-foreground bg-[#25D366] py-1 text-xs font-semibold text-white">
                     📤 Share sticker
                   </button>
@@ -71,7 +71,7 @@ function Explore() {
                 {s.video_url && (
                   <ExtensionButton url={s.video_url} title={s.title} small />
                 )}
-                {s.video_url && <WhatsAppAppButtons small url={s.video_url} title={s.title} />}
+                {s.video_url && <WhatsAppAppButtons small url={s.video_url} stickerUrl={s.sticker_url} title={s.title} />}
               </div>
             </div>
           ))}

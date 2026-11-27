@@ -128,14 +128,18 @@ async function encodeGifWebp(gifUrl: string, side: number, fps: number, quality:
   return new Blob([cat([te.encode("RIFF"), le(body.length, 4), body]) as BlobPart], { type: "image/webp" });
 }
 
+export const WA_STICKER_MAX_BYTES = 490_000;
+
 /** GIF + cut sound -> WhatsApp native sound sticker files. */
 export async function makeWhatsAppSoundSticker(opts: { gifUrl: string; audio: ArrayBuffer; start: number; seconds: number }) {
   const ogg = await encodeOggOpus(opts.audio, opts.start, opts.seconds);
   const exif = waExif(stickerMeta(await sha256b64(ogg)));
   let webp: Blob | null = null;
-  for (const [side, fps, q] of [[512, 15, 0.7], [512, 10, 0.55], [384, 10, 0.5], [320, 8, 0.4], [256, 6, 0.35]] as const) {
-    webp = await encodeGifWebp(opts.gifUrl, side, fps, q, exif);
-    if (webp.size <= 900_000) break;
+  // WhatsApp only accepts an animated sticker that is exactly 512x512 and under 500 KB (phone share sheet included),
+  // so shrink fps/quality, never the size.
+  for (const [fps, q] of [[15, 0.7], [12, 0.55], [10, 0.45], [8, 0.35], [6, 0.25], [5, 0.15], [4, 0.05]] as const) {
+    webp = await encodeGifWebp(opts.gifUrl, 512, fps, q, exif);
+    if (webp.size <= WA_STICKER_MAX_BYTES) break;
   }
   return { webp: webp!, ogg: new Blob([ogg as BlobPart], { type: "audio/ogg" }), seconds: Math.round(opts.seconds * 100) / 100 };
 }

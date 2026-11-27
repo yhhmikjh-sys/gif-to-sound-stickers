@@ -6,7 +6,7 @@ import { TopNav } from "@/components/TopNav";
 import { makeSoundSticker, gifSeconds, WHATSAPP_GIF_MAX } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
-import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
+import { sendToWhatsApp, prepareShare, phoneShareTarget, WEB_HINT } from "@/lib/send-to-whatsapp";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
 import { SoundGif } from "@/components/SoundGif";
@@ -68,9 +68,9 @@ function CreatePage() {
 
   const user = useUser();
   const [isPublic, setIsPublic] = useState(true);
-  const [result, setResult] = useState<{ url: string; mime: string; saved: boolean; mine: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; stickerUrl: string | null; mime: string; saved: boolean; mine: boolean } | null>(null);
 
-  useEffect(() => { if (result) void prepareShare(result.url, title).catch(() => {}); }, [result]);
+  useEffect(() => { if (result) { const t = phoneShareTarget(result.url, result.stickerUrl); void prepareShare(t.url, title, t.kind).catch(() => {}); } }, [result]);
   const create = useMutation({
     mutationFn: async () => {
       let audio: ArrayBuffer;
@@ -94,7 +94,7 @@ function CreatePage() {
       }
       let mine = false;
       if (user) { await saveToMyStickers(user.id, blob, mime, title, s.gif, waFiles); mine = true; }
-      return { url: URL.createObjectURL(blob), mime, saved, mine };
+      return { url: URL.createObjectURL(blob), stickerUrl: waFiles ? URL.createObjectURL(waFiles.webp) : null, mime, saved, mine };
     },
     onSuccess: setResult,
   });
@@ -197,14 +197,14 @@ function CreatePage() {
               {!result.mine && <p className="mt-1 text-sm"><Link to="/auth" className="font-semibold text-foreground underline">Sign in</Link> <span className="text-muted-foreground">karo to agle stickers account mein save honge.</span></p>}
               <p className="mt-1 text-sm text-muted-foreground">
                 {result.mime === "video/mp4"
-                  ? "Tap Send on WhatsApp → choose WhatsApp or WhatsApp Business → pick the chat → Send. It plays as a GIF with a 🔇 sound button."
+                  ? "Phone par Share dabao → WhatsApp chuno → chat chuno → Send. Yeh asli sticker ki tarah jayega. Sound chahiye to 'GIF with sound' dabao aur WhatsApp mein upar 'GIF' select karo."
                   : "This browser can't make a GIF with sound. Open the app in Chrome, Edge or Safari to get one."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 
-                <button onClick={() => { setCopyMsg(""); sendToWhatsApp(result.url, title).then((r) => setCopyMsg(r === "web" ? WEB_HINT : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-[#25D366] px-4 py-2 text-sm font-semibold text-white">📤 Share sticker</button>
+                <button onClick={() => { setCopyMsg(""); (() => { const t = phoneShareTarget(result.url, result.stickerUrl); return sendToWhatsApp(t.url, title, t.kind); })().then((r) => setCopyMsg(r === "web" ? WEB_HINT : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-[#25D366] px-4 py-2 text-sm font-semibold text-white">📤 Share sticker</button>
                 <ExtensionButton url={result.url} title={title} />
-                <WhatsAppAppButtons url={result.url} title={title} />
+                <WhatsAppAppButtons url={result.url} stickerUrl={result.stickerUrl} title={title} />
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
               {copyMsg && <p className="mt-2 text-sm text-muted-foreground">{copyMsg}</p>}

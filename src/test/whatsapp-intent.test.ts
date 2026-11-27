@@ -12,3 +12,17 @@ describe("WhatsApp app links", () => {
     expect(WA_APPS.map((a) => a.pkg)).toEqual(["com.whatsapp", "com.whatsapp.w4b"]);
   });
 });
+
+describe("phone share sends the sticker, not the video", () => {
+  const setUA = (ua: string) => Object.defineProperty(globalThis, "navigator", { value: { userAgent: ua }, configurable: true });
+  it("Android phone shares the WebP sticker file", async () => {
+    setUA("Mozilla/5.0 (Linux; Android 14)");
+    const { phoneShareTarget } = await import("@/lib/send-to-whatsapp");
+    expect(phoneShareTarget("v.mp4", "s.webp")).toEqual({ url: "s.webp", kind: "sticker" });
+  });
+  it("computer keeps the video with sound", async () => {
+    setUA("Mozilla/5.0 (Windows NT 10.0)");
+    const { phoneShareTarget } = await import("@/lib/send-to-whatsapp");
+    expect(phoneShareTarget("v.mp4", "s.webp")).toEqual({ url: "v.mp4", kind: "video" });
+  });
+});

@@ -2,24 +2,26 @@
 // Computer: Chrome/Edge usually show the system share sheet too. Nothing is ever downloaded.
 // Phones (Safari especially) only open the share menu right after a tap, so the file is fetched ahead of time.
 const ready = new Map<string, Promise<File>>();
-export function prepareShare(url: string, title: string): Promise<File> {
-  let p = ready.get(url);
+export function prepareShare(url: string, title: string, kind: "video" | "sticker" = "video"): Promise<File> {
+  const key = `${kind}:${url}`;
+  let p = ready.get(key);
   if (!p) {
     p = fetch(url).then((r) => r.blob()).then((blob) => {
-      // Storage can answer with a generic type; phones only offer WhatsApp for a real video type.
-      const type = blob.type.startsWith("video/") ? blob.type : "video/mp4";
-      const ext = type.includes("webm") ? "webm" : "mp4";
+      // A 512x512 .webp shared to WhatsApp arrives as a real sticker; anything else goes as video/GIF.
+      // Storage can answer with a generic type, so the type is forced from the kind.
+      const type = kind === "sticker" ? "image/webp" : blob.type.startsWith("video/") ? blob.type : "video/mp4";
+      const ext = kind === "sticker" ? "webp" : type.includes("webm") ? "webm" : "mp4";
       const name = (title || "sticker").replace(/[^\w\- ]+/g, "").trim().slice(0, 40) || "sticker";
       return new File([blob], `${name}.${ext}`, { type });
     });
-    p.catch(() => ready.delete(url));
-    ready.set(url, p);
+    p.catch(() => ready.delete(key));
+    ready.set(key, p);
   }
   return p;
 }
 
-export async function sendToWhatsApp(url: string, title: string): Promise<"shared" | "web"> {
-  const file = await prepareShare(url, title);
+export async function sendToWhatsApp(url: string, title: string, kind: "video" | "sticker" = "video"): Promise<"shared" | "web"> {
+  const file = await prepareShare(url, title, kind);
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({ files: [file] });
     return "shared";
@@ -64,4 +66,9 @@ export function phoneOs(): "android" | "ios" | null {
 export function whatsappIntentUrl(pkg: string, text: string) {
   const store = `https://play.google.com/store/apps/details?id=${pkg}`;
   return `intent://send/?text=${encodeURIComponent(text)}#Intent;scheme=whatsapp;package=${pkg};S.browser_fallback_url=${encodeURIComponent(store)};end`;
+}
+
+/** On phones, prefer the WhatsApp sticker file (WebP) so it lands as a sticker, not a video. */
+export function phoneShareTarget(videoUrl: string, stickerUrl?: string | null): { url: string; kind: "video" | "sticker" } {
+  return phoneOs() && stickerUrl ? { url: stickerUrl, kind: "sticker" } : { url: videoUrl, kind: "video" };
 }
