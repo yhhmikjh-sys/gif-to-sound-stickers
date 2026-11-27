@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { searchStickers, makeWhatsAppSticker, type Sticker } from "@/lib/stickers.functions";
 
 export const Route = createFileRoute("/")({
@@ -16,8 +16,36 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [input, setInput] = useState("");
   const [q, setQ] = useState("");
-  const search = useMutation({ mutationFn: (q: string) => searchStickers({ data: { q } }) });
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  const query = useInfiniteQuery({
+    queryKey: ["stickers", q],
+    enabled: !!q,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => searchStickers({ data: { q, offset: pageParam } }),
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+  });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (e) => {
+        if (e[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+      },
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const seen = new Set<string>();
+  const items = (query.data?.pages.flatMap((p) => p.items) ?? []).filter((s) =>
+    seen.has(s.id) ? false : (seen.add(s.id), true),
+  );
 
   return (
     <main className="min-h-screen px-4 py-12">
@@ -26,34 +54,33 @@ function Index() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (q.trim()) search.mutate(q);
+            setQ(input.trim());
           }}
-          className="mx-auto mt-8 flex max-w-xl gap-2"
+          className="sticky top-3 z-10 mx-auto mt-8 flex max-w-xl gap-2"
         >
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             placeholder="cat, love, anime..."
             className="flex-1 rounded-full border-2 border-foreground bg-card px-5 py-3 text-foreground outline-none focus:ring-4 focus:ring-primary/40"
           />
-          <button
-            disabled={search.isPending}
-            className="rounded-full border-2 border-foreground bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-pop transition active:translate-y-0.5 disabled:opacity-60"
-          >
-            {search.isPending ? "..." : "Search"}
+          <button className="rounded-full border-2 border-foreground bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-pop transition active:translate-y-0.5">
+            Search
           </button>
         </form>
 
-        {search.isError && (
-          <p className="mt-8 text-center text-destructive">Search failed, try again.</p>
-        )}
-        {search.data && search.data.length === 0 && (
+        {query.isError && <p className="mt-8 text-center text-destructive">Search failed, try again.</p>}
+        {query.isSuccess && items.length === 0 && (
           <p className="mt-8 text-center text-muted-foreground">No stickers found.</p>
         )}
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {search.data?.map((s) => (
+        <div className="mt-10 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+          {items.map((s) => (
             <StickerCard key={s.id} s={s} />
           ))}
+        </div>
+        <div ref={sentinel} className="py-8 text-center text-muted-foreground">
+          {(query.isFetching || isFetchingNextPage) && "Loading..."}
+          {query.isSuccess && !hasNextPage && items.length > 0 && "That's all!"}
         </div>
       </div>
     </main>
@@ -62,23 +89,23 @@ function Index() {
 
 function StickerCard({ s }: { s: Sticker }) {
   const make = useMutation({
-    mutationFn: () => makeWhatsAppSticker({ data: { imageUrl: s.image } }),
+    mutationFn: () => makeWhatsAppSticker({ data: { imageUrl: s.original } }),
     onSuccess: (dataUrl) => {
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `sticker-${s.id.slice(0, 8)}.webp`;
+      a.download = `sticker-${s.id}.webp`;
       a.click();
     },
   });
   return (
     <div className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
-      <img src={s.image} alt={s.title} loading="lazy" className="aspect-square w-full object-cover" />
+      <img src={s.image} alt={s.title} loading="lazy" className="aspect-square w-full object-contain p-1" />
       <button
         onClick={() => make.mutate()}
         disabled={make.isPending}
-        className="w-full border-t-2 border-foreground bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        className="w-full border-t-2 border-foreground bg-primary py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
       >
-        {make.isPending ? "Making..." : make.isError ? "Failed, retry" : "WhatsApp sticker ⬇"}
+        {make.isPending ? "Making..." : make.isError ? "Failed, retry" : "WhatsApp ⬇"}
       </button>
     </div>
   );
