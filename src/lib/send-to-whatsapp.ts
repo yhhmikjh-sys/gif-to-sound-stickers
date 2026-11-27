@@ -6,8 +6,11 @@ export function prepareShare(url: string, title: string): Promise<File> {
   let p = ready.get(url);
   if (!p) {
     p = fetch(url).then((r) => r.blob()).then((blob) => {
-      const ext = blob.type.includes("webm") ? "webm" : "mp4";
-      return new File([blob], `${title || "sticker"}.${ext}`, { type: blob.type || "video/mp4" });
+      // Storage can answer with a generic type; phones only offer WhatsApp for a real video type.
+      const type = blob.type.startsWith("video/") ? blob.type : "video/mp4";
+      const ext = type.includes("webm") ? "webm" : "mp4";
+      const name = (title || "sticker").replace(/[^\w\- ]+/g, "").trim().slice(0, 40) || "sticker";
+      return new File([blob], `${name}.${ext}`, { type });
     });
     p.catch(() => ready.delete(url));
     ready.set(url, p);
@@ -21,8 +24,20 @@ export async function sendToWhatsApp(url: string, title: string): Promise<"share
     await navigator.share({ files: [file] });
     return "shared";
   }
-  // Phones must send the sticker file itself, never a link.
-  if (phoneOs()) throw new Error("Is browser se file share nahi ho rahi. Chrome (Android) ya Safari (iPhone) mein kholo.");
+  // Phones must send the sticker file itself, never a link. Some browsers answer canShare=false but still share.
+  if (phoneOs()) {
+    try {
+      if (!navigator.share) throw new Error("no share");
+      await navigator.share({ files: [file] });
+      return "shared";
+    } catch (e) {
+      if ((e as Error).name === "AbortError") throw e;
+      // The Lovable editor preview runs the site in a frame where the phone blocks file sharing.
+      throw new Error(window.top !== window.self
+        ? "Preview ke andar phone file share nahi karne deta. Site ko naye tab mein (ya publish karke) kholo, phir Share dabao."
+        : "Is browser se file share nahi ho rahi. Chrome (Android) ya Safari (iPhone) mein kholo.");
+    }
+  }
   // Computer without a share menu: open WhatsApp Web; the user picks the chat there.
   const link = /^https?:/.test(url) ? `https://web.whatsapp.com/send?text=${encodeURIComponent(`${title} 🔊 ${url}`)}` : "https://web.whatsapp.com/";
   window.open(link, "_blank", "noopener");
