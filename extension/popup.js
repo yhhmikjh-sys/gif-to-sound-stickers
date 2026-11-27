@@ -11,5 +11,6 @@ async function show() {
 $("in").onclick = async () => { msg(""); try { await sbSignIn($("email").value, $("pw").value); show(); } catch (e) { msg(e.message); } };
 $("up").onclick = async () => { msg(""); try { (await sbSignUp($("email").value, $("pw").value)) ? show() : msg("Email check karo, link dabake confirm karo, phir Sign in."); } catch (e) { msg(e.message); } };
 $("out-btn").onclick = async () => { await sbSignOut(); show(); };
+$("wa2").onclick = () => chrome.tabs.create({ url: "https://web.whatsapp.com/" });
 $("wa").onclick = () => chrome.tabs.create({ url: "https://web.whatsapp.com/" });
 show();

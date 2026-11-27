@@ -5,10 +5,10 @@
   Object.assign(btn.style, { position: "fixed", right: "20px", bottom: "90px", zIndex: 99999, padding: "10px 16px", borderRadius: "999px", border: "2px solid #111", background: "#25D366", color: "#fff", fontWeight: "700", cursor: "pointer", boxShadow: "3px 3px 0 #111" });
   const panel = document.createElement("div");
   Object.assign(panel.style, { position: "fixed", right: "20px", bottom: "140px", zIndex: 99999, width: "330px", maxHeight: "65vh", overflow: "auto", background: "#fff", color: "#111", border: "2px solid #111", borderRadius: "16px", padding: "12px", display: "none", fontFamily: "sans-serif", boxShadow: "4px 4px 0 #111" });
-  panel.innerHTML = '<b style="font-size:16px">Sound stickers</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0 8px"><button data-tab="public">Public</button><button data-tab="viewer">Viewer</button></div><p data-msg style="font-size:12px;color:#555;margin:4px 0 8px"></p><div data-list></div>';
+  panel.innerHTML = '<b style="font-size:16px">Sound stickers</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0 8px"><button data-tab="public">Public</button><button data-tab="viewer">Your stickers</button></div><p data-msg style="font-size:12px;color:#555;margin:4px 0 8px"></p><div data-list></div>';
   document.body.append(btn, panel);
 
-  let activeTab = "viewer";
+  let activeTab = "public";
   let renderId = 0;
   const publicState = { items: [], nextOffset: 0, loaded: false, loading: false };
   const message = (text) => { panel.querySelector("[data-msg]").textContent = text; };
@@ -95,11 +95,23 @@
 
   async function renderViewer(id) {
     let mine = [];
-    let signedIn = true;
-    try { mine = await sbMyStickers(); } catch { signedIn = false; }
+    try { mine = await sbMyStickers(); } catch {
+      if (id !== renderId) return;
+      message("Apne stickers dekhne ke liye sign in / sign up karo.");
+      const f = document.createElement("div");
+      f.innerHTML = '<input data-e type="email" placeholder="Email"><input data-p type="password" placeholder="Password (6+)"><button data-in>Sign in</button><button data-up>Sign up</button><p data-err style="font-size:12px;color:#c00"></p>';
+      for (const el of f.querySelectorAll("input")) Object.assign(el.style, { width: "100%", boxSizing: "border-box", padding: "8px", border: "2px solid #111", borderRadius: "10px", marginTop: "6px" });
+      for (const el of f.querySelectorAll("button")) Object.assign(el.style, { width: "100%", padding: "8px", border: "2px solid #111", borderRadius: "999px", background: el.dataset.in !== undefined ? "#25D366" : "#fff", color: el.dataset.in !== undefined ? "#fff" : "#111", fontWeight: "700", cursor: "pointer", marginTop: "6px" });
+      const err = (t) => (f.querySelector("[data-err]").textContent = t);
+      const em = () => f.querySelector("[data-e]").value, pw = () => f.querySelector("[data-p]").value;
+      f.querySelector("[data-in]").onclick = async () => { err(""); try { await sbSignIn(em(), pw()); render(); } catch (e) { err(e.message); } };
+      f.querySelector("[data-up]").onclick = async () => { err(""); try { (await sbSignUp(em(), pw())) ? render() : err("Email check karo, link se confirm karo, phir Sign in."); } catch (e) { err(e.message); } };
+      list().innerHTML = ""; list().append(f);
+      return;
+    }
     const { stickers: local } = await chrome.storage.local.get({ stickers: [] });
     if (id !== renderId) return;
-    message(signedIn ? "Aapke banaye stickers — click karte hi send hoga." : "Local stickers dikhte hain. Account stickers ke liye extension icon se Sign in karo.");
+    message("Aapke banaye stickers — click karte hi send hoga.");
     addGrid([...mine, ...local], local);
   }
 
