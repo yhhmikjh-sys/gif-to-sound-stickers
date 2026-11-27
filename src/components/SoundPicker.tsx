@@ -32,6 +32,12 @@ export function SoundPicker({ initialQuery, onClose, onSelect }: { initialQuery:
 
   useEffect(() => () => audio.current?.pause(), []);
 
+  // Search as you type (debounced).
+  useEffect(() => {
+    const t = setTimeout(() => setQ(input.trim()), 400);
+    return () => clearTimeout(t);
+  }, [input]);
+
   const toggle = (s: Sound) => {
     audio.current?.pause();
     if (playing === s.id) return setPlaying(null);
@@ -69,7 +75,7 @@ export function SoundPicker({ initialQuery, onClose, onSelect }: { initialQuery:
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-lg text-primary-foreground">
                 {playing === s.id ? "■" : "▶"}
               </button>
-              <span className="flex-1 truncate font-semibold text-foreground">{s.title}</span>
+              <button onClick={() => toggle(s)} className="min-w-0 flex-1 truncate text-left font-semibold text-foreground">{s.title}</button>
               <button onClick={() => { audio.current?.pause(); onSelect(s); }}
                 className="rounded-full border-2 border-foreground bg-foreground px-4 py-1.5 text-sm font-semibold text-background">Select</button>
             </li>
