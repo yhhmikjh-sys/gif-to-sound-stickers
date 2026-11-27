@@ -52,7 +52,7 @@
     "default_icon": "icon.png"
   },
   "host_permissions": [
-    "https://c--1021934e-13af-434c-b52f-e88cbd1f3cbd-prod.lovable.cloud/*",
+    "https://c--b64fa0cb-35d5-43aa-8ca5-3939e0394a0d-prod.lovable.cloud/*",
     "https://*.giphy.com/*"
   ],
   "minimum_chrome_version": "111"

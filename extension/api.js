@@ -1,6 +1,6 @@
 // StikDesi account access for the extension (publishable key only; the user's own session decides what they can see).
-const SB_URL = "https://c--1021934e-13af-434c-b52f-e88cbd1f3cbd-prod.lovable.cloud";
-const SB_KEY = "sb_publishable_QFGgry-yenjfVIMEq7PnBQ_mtXCCOfq";
+const SB_URL = "https://c--b64fa0cb-35d5-43aa-8ca5-3939e0394a0d-prod.lovable.cloud";
+const SB_KEY = "sb_publishable_ZneXlqOESXnwKQvD7Xs8Jg_uIm6EhFz";
 
 async function sbSession() { return (await chrome.storage.local.get({ session: null })).session; }
 async function sbSave(s) { await chrome.storage.local.set({ session: s ? { access_token: s.access_token, refresh_token: s.refresh_token, email: s.user?.email ?? s.email } : null }); }
