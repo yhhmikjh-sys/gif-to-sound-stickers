@@ -40,7 +40,16 @@ function download(href: string, name: string) {
   a.click();
 }
 
+async function shareOrCopy(url: string, name: string, mime: string) {
+  const blob = await (await fetch(url)).blob();
+  const f = new File([blob], name, { type: mime });
+  if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f] }); return "shared"; }
+  try { await navigator.clipboard.write([new ClipboardItem({ [mime]: blob })]); return "copied"; } catch { /* browsers rarely allow video on the clipboard */ }
+  throw new Error("This browser can't copy a GIF with sound. Open the app on your phone and tap Copy / Send to WhatsApp, or Download.");
+}
+
 function CreatePage() {
+  const [copyMsg, setCopyMsg] = useState("");
   const s = Route.useSearch();
   const [title, setTitle] = useState(s.title.replace(/ GIF$| Sticker$/i, "").slice(0, 80));
   const [file, setFile] = useState<File | null>(null);
@@ -55,7 +64,9 @@ function CreatePage() {
   // The GIF's own loop length, shown for reference. The sound cut is locked at WhatsApp's 6s GIF limit.
   const [gifLen, setGifLen] = useState(3);
   useEffect(() => { if (s.gif) void gifSeconds(s.gif).then((d) => setGifLen(Math.min(WHATSAPP_GIF_MAX, Math.max(0.5, d)))).catch(() => {}); }, [s.gif]);
-  const fitEnd = (d: number) => Math.min(d, WHATSAPP_GIF_MAX);
+  // Default cut = the GIF's own length; the user may stretch it up to the 6s max.
+  const fitEnd = (d: number) => Math.min(d, gifLen, WHATSAPP_GIF_MAX);
+  useEffect(() => { if (duration > 0 && Number.isFinite(duration)) { setStart(0); setEnd(Math.min(duration, gifLen)); } }, [gifLen]);
 
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
@@ -155,7 +166,7 @@ function CreatePage() {
                 <span className="text-sm text-muted-foreground">{start.toFixed(1)}s → {end.toFixed(1)}s ({seconds.toFixed(1)}s)</span>
               </div>
               <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onPlay={() => setGifKey((k) => k + 1)} lockLen={WHATSAPP_GIF_MAX} onDuration={(d) => { setDuration(d); setStart(0); setEnd(fitEnd(d)); }} />
-              <p className="text-xs text-muted-foreground">Cut is locked at {Math.min(WHATSAPP_GIF_MAX, Number.isFinite(duration) && duration > 0 ? duration : WHATSAPP_GIF_MAX).toFixed(1)}s — drag the highlighted part anywhere to choose which part plays.</p>
+              <p className="text-xs text-muted-foreground">Starts at the GIF's length ({gifLen.toFixed(1)}s). Drag the edges to make it longer — max {WHATSAPP_GIF_MAX}s. Drag the middle to move it.</p>
               <p className="text-xs text-muted-foreground">Total sound: {Number.isFinite(duration) ? duration.toFixed(1) : "…"}s · GIF is {gifLen.toFixed(1)}s and loops to fill the cut.</p>
             </div>
           )}
@@ -181,8 +192,10 @@ function CreatePage() {
               </p>
               <div className="mt-3 flex gap-2">
                 <button onClick={() => download(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`)} className="rounded-full border-2 border-foreground bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Download GIF with sound</button>
+                <button onClick={() => { setCopyMsg(""); shareOrCopy(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`, result.mime).then((r) => setCopyMsg(r === "copied" ? "Copied! Paste it in WhatsApp." : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-card px-4 py-2 text-sm font-semibold text-foreground">📋 Copy / Send to WhatsApp</button>
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
+              {copyMsg && <p className="mt-2 text-sm text-muted-foreground">{copyMsg}</p>}
             </div>
           )}
         </div>

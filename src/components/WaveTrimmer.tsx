@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 const BARS = 80;
 
-// Voice-note style waveform. The cut is a fixed-length window (WhatsApp's 6s GIF limit):
-// you slide it anywhere along the sound to pick *which* part plays, not how long it is.
+// Voice-note style waveform. Drag the edges to resize the cut (up to lockLen, WhatsApp's 6s GIF limit)
+// or drag the middle to slide it.
 export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, onPlay, lockLen = 6 }: {
   lockLen?: number;
   src: string; duration: number; start: number; end: number;
@@ -57,24 +57,58 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, o
   };
 
   const ready = duration > 0 && Number.isFinite(duration);
-  const win = ready ? Math.min(lockLen, duration) : 0;
-  const s0 = ready ? Math.min(Math.max(0, start), Math.max(0, duration - win)) : 0;
-  const e0 = s0 + win;
+  const MIN = 0.5;
+  const maxLen = ready ? Math.min(lockLen, duration) : 0;
+  const s0 = ready ? Math.min(Math.max(0, start), Math.max(0, duration - MIN)) : 0;
+  const e0 = ready ? Math.min(duration, Math.max(s0 + MIN, Math.min(end, s0 + maxLen))) : 0;
+  const win = e0 - s0;
 
   const timeAt = (x: number) => {
     const r = box.current!.getBoundingClientRect();
     return Math.min(1, Math.max(0, (x - r.left) / r.width)) * duration;
   };
 
-  // Slide the whole locked window so the grabbed point stays under the finger.
-  const slide = (x: number) => {
-    const off = grab.current ?? 0;
-    const ns = Math.min(Math.max(0, timeAt(x) - off), Math.max(0, duration - win));
-    onChange(ns, ns + win);
+  // Left/right handles change the length (max lockLen); grabbing the middle slides the whole cut.
+  const mode = useRef<"l" | "r" | "m">("m");
+  const move = (x: number) => {
+    const t = timeAt(x);
+    const { start: cs, end: ce } = cur.current;
+    if (mode.current === "l") onChange(Math.min(Math.max(0, t, ce - lockLen), ce - MIN), ce);
+    else if (mode.current === "r") onChange(cs, Math.max(Math.min(duration, t, cs + lockLen), cs + MIN));
+    else {
+      const len = ce - cs;
+      const ns = Math.min(Math.max(0, t - (grab.current ?? 0)), Math.max(0, duration - len));
+      onChange(ns, ns + len);
+    }
   };
 
   const down = (ev: React.PointerEvent) => {
     if (!ready) return;
+    ev.preventDefault();
+    audio.current?.pause(); setPos(null);
+    const t = timeAt(ev.clientX);
+    const tol = duration * 0.04;
+    mode.current = Math.abs(t - s0) < tol ? "l" : Math.abs(t - e0) < tol ? "r" : t < s0 ? "l" : t > e0 ? "r" : "m";
+    grab.current = t - s0;
+    cur.current = { start: s0, end: e0 };
+    if (mode.current !== "m") move(ev.clientX);
+    const mv = (e: PointerEvent) => move(e.clientX);
+    const up = () => {
+      grab.current = null;
+      window.removeEventListener("pointermove", mv);
+      window.removeEventListener("pointerup", up);
+      play();
+    };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", up);
+  };
+
+  const nudge = (d: number) => {
+    const ns = Math.min(Math.max(0, s0 + d), Math.max(0, duration - win));
+    onChange(ns, ns + win);
+  };
+
+  if (!ready) return;
     ev.preventDefault();
     audio.current?.pause(); setPos(null);
     grab.current = timeAt(ev.clientX) - s0;
@@ -128,14 +162,14 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, o
         </div>
         <div className="pointer-events-none absolute inset-y-0 rounded-lg border-y-4 border-primary" style={{ left: pct(s0), right: `calc(100% - ${pct(e0)})` }} />
         <span className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-bold text-background" style={{ left: pct((s0 + e0) / 2) }}>
-          🔒 {win.toFixed(1)}s
+          {win.toFixed(1)}s
         </span>
         {([s0, e0] as const).map((t, i) => (
           <span key={i} aria-hidden className="pointer-events-none absolute inset-y-0 w-4 -translate-x-1/2 rounded-md bg-primary shadow-pop after:absolute after:inset-y-8 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-primary-foreground" style={{ left: pct(t) }} />
         ))}
       </div>
       <div className="mt-2 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{s0.toFixed(1)}s → {e0.toFixed(1)}s · locked {win.toFixed(1)}s</span>
+        <span className="text-muted-foreground">{s0.toFixed(1)}s → {e0.toFixed(1)}s · max {maxLen.toFixed(1)}s</span>
         <button type="button" onClick={play} className="rounded-full bg-foreground px-4 py-1.5 font-semibold text-background">▶ Play cut</button>
       </div>
     </div>
