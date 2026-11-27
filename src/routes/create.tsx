@@ -180,11 +180,11 @@ function CreatePage() {
               <p className="font-semibold text-foreground">Done! {result.saved && "Saved to public stickers."}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {result.mime === "video/mp4"
-                  ? "In WhatsApp: attach → Gallery → pick this file → tap the GIF switch at the top → Send. It shows as a GIF with a 🔇 sound button."
+                  ? "Tap Send on WhatsApp → choose WhatsApp or WhatsApp Business → pick the chat → Send. It plays as a GIF with a 🔇 sound button."
                   : "This browser can't make a GIF with sound. Open the app in Chrome, Edge or Safari to get one."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => download(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`)} className="rounded-full border-2 border-foreground bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Download GIF with sound</button>
+                
                 <button onClick={() => { setCopyMsg(""); sendToWhatsApp(result.url, title).then((r) => setCopyMsg(r === "web" ? WEB_HINT : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-[#25D366] px-4 py-2 text-sm font-semibold text-white">📤 Send on WhatsApp</button>
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
