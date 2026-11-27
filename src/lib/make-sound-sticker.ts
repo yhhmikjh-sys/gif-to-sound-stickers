@@ -1,4 +1,5 @@
 import { decompressFrames, parseGIF } from "gifuct-js";
+import { isPrivateVideoDurationAllowed } from "./private-video-duration";
 
 type Frame = { canvas: HTMLCanvasElement; delay: number };
 
@@ -31,6 +32,71 @@ export async function decodeGif(url: string): Promise<{ frames: Frame[]; width: 
   return { frames, width, height };
 }
 
+// Uploaded video clips are sampled into 512px frames so the same browser encoder
+// can loop them for the selected sound without relying on server-side video tools.
+export async function decodeVideoFrames(file: Blob): Promise<{ frames: Frame[]; width: number; height: number }> {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.preload = "auto";
+  video.muted = true;
+  video.playsInline = true;
+  video.src = url;
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error("Couldn't read this video"));
+    });
+    if (!isPrivateVideoDurationAllowed(video.duration)) {
+      throw new Error("Choose a video clip that is 4 seconds or shorter");
+    }
+    if (video.readyState < 2) {
+      await new Promise<void>((resolve, reject) => {
+        video.addEventListener("loadeddata", () => resolve(), { once: true });
+        video.addEventListener("error", () => reject(new Error("Couldn't decode this video")), { once: true });
+      });
+    }
+
+    const duration = video.duration;
+    const frameRate = 12;
+    const frameStep = 1000 / frameRate;
+    const count = Math.max(1, Math.ceil(duration * frameRate));
+    const frames: Frame[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const time = Math.min(i / frameRate, Math.max(0, duration - 0.02));
+      if (i > 0) {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = window.setTimeout(() => reject(new Error("Video frame took too long to load")), 10_000);
+          video.addEventListener("seeked", () => { window.clearTimeout(timeout); resolve(); }, { once: true });
+          video.addEventListener("error", () => { window.clearTimeout(timeout); reject(new Error("Couldn't decode this video")); }, { once: true });
+          video.currentTime = time;
+        });
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Video canvas is unavailable");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const scale = Math.min(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+      const width = video.videoWidth * scale;
+      const height = video.videoHeight * scale;
+      context.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+      frames.push({ canvas, delay: Math.max(1, Math.min(frameStep, duration * 1000 - i * frameStep)) });
+    }
+
+    return { frames, width: 512, height: 512 };
+  } finally {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
 // WhatsApp only turns clips up to 6 seconds into a GIF.
 export const WHATSAPP_GIF_MAX = 6;
 
@@ -43,12 +109,19 @@ export async function gifSeconds(url: string): Promise<number> {
 
 // Browser-only: loops the GIF for as long as the cut sound lasts, sound plays once (like StikSound).
 export async function makeSoundSticker(opts: {
-  gifUrl: string;
+  gifUrl?: string;
+  videoFile?: Blob;
   audio: ArrayBuffer;
   start: number;
   seconds: number;
 }): Promise<{ blob: Blob; mime: string }> {
-  const { frames, width, height } = await decodeGif(opts.gifUrl);
+  const source = opts.videoFile
+    ? await decodeVideoFrames(opts.videoFile)
+    : opts.gifUrl
+      ? await decodeGif(opts.gifUrl)
+      : null;
+  if (!source) throw new Error("Pick a GIF or video first");
+  const { frames, width, height } = source;
   if (!frames.length) throw new Error("Couldn't read the GIF");
   const total = frames.reduce((s, f) => s + f.delay, 0);
   const frameAt = (ms: number) => {
