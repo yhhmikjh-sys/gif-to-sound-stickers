@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
-import { makeSoundSticker } from "@/lib/make-sound-sticker";
+import { makeSoundSticker, gifSeconds, WHATSAPP_GIF_MAX } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
@@ -17,9 +17,9 @@ export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
       { title: "Create sound sticker — StikDesi" },
-      { name: "description", content: "Add a sound to your GIF and make a 5 or 10 second WhatsApp sound sticker." },
+      { name: "description", content: "Add a sound to your GIF and make a short WhatsApp GIF with sound." },
       { property: "og:title", content: "Create sound sticker — StikDesi" },
-      { property: "og:description", content: "Add a sound to your GIF and make a 5 or 10 second WhatsApp sound sticker." },
+      { property: "og:description", content: "Add a sound to your GIF and make a short WhatsApp GIF with sound." },
     ],
   }),
   component: CreatePage,
@@ -52,6 +52,11 @@ function CreatePage() {
   const seconds = Math.max(0.5, end - start);
   const [soundSrc, setSoundSrc] = useState("");
   const [gifKey, setGifKey] = useState(0);
+  // Sound length defaults to the GIF's own length (WhatsApp GIFs max 6s).
+  const [gifLen, setGifLen] = useState(3);
+  useEffect(() => { if (s.gif) void gifSeconds(s.gif).then((d) => setGifLen(Math.min(WHATSAPP_GIF_MAX, Math.max(0.5, d)))).catch(() => {}); }, [s.gif]);
+  const fitEnd = (d: number) => Math.min(d, gifLen);
+  useEffect(() => { if (duration > 0) { setStart(0); setEnd(Math.min(duration, gifLen)); } }, [gifLen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
@@ -137,7 +142,7 @@ function CreatePage() {
               <input type="file" accept="audio/*,video/*" onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 setFile(f); setPack(null); if (f) setSoundSrc(URL.createObjectURL(f)); setStart(0); setResult(null);
-                if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); }; }
+                if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(fitEnd(a.duration || gifLen)); }; }
               }} className="mt-2 w-full text-sm text-foreground" />
               {file && !pack && <p className="mt-1 text-foreground">Using: {file.name}</p>}
             </details>
@@ -150,8 +155,9 @@ function CreatePage() {
                 <span className="font-semibold text-foreground">✂️ Cut the sound</span>
                 <span className="text-sm text-muted-foreground">{start.toFixed(1)}s → {end.toFixed(1)}s ({seconds.toFixed(1)}s)</span>
               </div>
-              <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onPlay={() => setGifKey((k) => k + 1)} onDuration={(d) => { setDuration(d); setStart(0); setEnd(Math.min(10, d)); }} />
-              <p className="text-xs text-muted-foreground">Max 10 seconds. Total sound: {Number.isFinite(duration) ? duration.toFixed(1) : "…"}s</p>
+              <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onPlay={() => setGifKey((k) => k + 1)} maxLen={WHATSAPP_GIF_MAX} onDuration={(d) => { setDuration(d); setStart(0); setEnd(fitEnd(d)); }} />
+              <p className="text-xs text-muted-foreground">GIF is {gifLen.toFixed(1)}s, so the sound is cut to {gifLen.toFixed(1)}s. Drag to stretch up to {WHATSAPP_GIF_MAX}s (WhatsApp GIF limit).</p>
+              <p className="text-xs text-muted-foreground">Total sound: {Number.isFinite(duration) ? duration.toFixed(1) : "…"}s</p>
             </div>
           )}
 

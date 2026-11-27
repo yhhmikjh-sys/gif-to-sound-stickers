@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 const BARS = 80;
 
 // Voice-note style bars with left/right handles. Releasing a handle plays the cut.
-export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, onPlay }: {
+export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, onPlay, maxLen = 6 }: {
+  maxLen?: number;
   src: string; duration: number; start: number; end: number;
   onChange: (start: number, end: number) => void;
   onDuration: (d: number) => void;
@@ -61,8 +62,8 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, o
   const move = (x: number) => {
     const t = timeAt(x);
     const { start: s, end: e } = cur.current;
-    if (drag.current === "l") { const ns = Math.min(t, e - 0.5); onChange(Math.max(0, ns, e - 10), e); }
-    if (drag.current === "r") { const ne = Math.max(t, s + 0.5); onChange(s, Math.min(duration, ne, s + 10)); }
+    if (drag.current === "l") { const ns = Math.min(t, e - 0.5); onChange(Math.max(0, ns, e - maxLen), e); }
+    if (drag.current === "r") { const ne = Math.max(t, s + 0.5); onChange(s, Math.min(duration, ne, s + maxLen)); }
   };
   const down = (side: "l" | "r") => (ev: React.PointerEvent) => {
     ev.preventDefault();
@@ -94,8 +95,8 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, o
               const d = e.key === "ArrowLeft" ? -0.1 : e.key === "ArrowRight" ? 0.1 : 0;
               if (!d) return;
               e.preventDefault();
-              if (side === "l") onChange(Math.min(Math.max(0, start + d, end - 10), end - 0.5), end);
-              else onChange(start, Math.max(Math.min(duration, end + d, start + 10), start + 0.5));
+              if (side === "l") onChange(Math.min(Math.max(0, start + d, end - maxLen), end - 0.5), end);
+              else onChange(start, Math.max(Math.min(duration, end + d, start + maxLen), start + 0.5));
             }}
             onKeyUp={(e) => (e.key === "ArrowLeft" || e.key === "ArrowRight") && play()}
             className="absolute inset-y-0 w-4 -translate-x-1/2 cursor-ew-resize rounded-md bg-primary shadow-pop after:absolute after:inset-y-8 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-primary-foreground"

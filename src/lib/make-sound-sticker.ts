@@ -31,6 +31,16 @@ async function decodeGif(url: string): Promise<{ frames: Frame[]; width: number;
   return { frames, width, height };
 }
 
+// WhatsApp only turns clips up to 6 seconds into a GIF.
+export const WHATSAPP_GIF_MAX = 6;
+
+// Length of one loop of the GIF, in seconds.
+export async function gifSeconds(url: string): Promise<number> {
+  const gif = parseGIF(await (await fetch(url)).arrayBuffer());
+  const raw = decompressFrames(gif, false);
+  return raw.reduce((s, f) => s + Math.max(20, f.delay || 100), 0) / 1000;
+}
+
 // Browser-only: loops the GIF for as long as the cut sound lasts, sound plays once (like StikSound).
 export async function makeSoundSticker(opts: {
   gifUrl: string;
