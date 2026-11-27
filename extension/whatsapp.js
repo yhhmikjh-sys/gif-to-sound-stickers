@@ -70,6 +70,33 @@
     return new File([blob], `${s.title}.${extension}`, { type: mime });
   }
 
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  function mediaInput() {
+    return [...document.querySelectorAll('input[type="file"]')].find((i) => /video|image\/\*/.test(i.accept || "") && !/document|application/.test(i.accept || ""));
+  }
+  async function viaMediaPicker(transfer) {
+    let input = mediaInput();
+    if (!input) {
+      const attach = document.querySelector('footer [aria-label="Attach"], footer span[data-icon="plus-rounded"], footer span[data-icon="plus"], footer span[data-icon="attach-menu-plus"], footer span[data-icon="clip"]');
+      const btn = attach?.closest('button, div[role="button"]') || attach;
+      if (!btn) return false;
+      btn.click();
+      for (let i = 0; i < 15 && !(input = mediaInput()); i++) await wait(100);
+      if (!input) { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); return false; }
+    }
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return true;
+  }
+  async function turnOnGif() {
+    for (let i = 0; i < 30; i++) {
+      const gif = [...document.querySelectorAll('span[data-icon*="gif"], [aria-label*="GIF"]')].find((el) => !el.closest("footer") && !el.closest("#stikdesi-panel"));
+      if (gif) { const b = gif.closest('button, div[role="button"]') || gif; if (b.getAttribute("aria-pressed") !== "true") b.click(); return; }
+      await wait(200);
+    }
+  }
+
   async function dropIntoChat(s) {
     const box = document.querySelector('footer div[contenteditable="true"]');
     if (!box) { message("Pehle koi chat kholo, phir sticker chuno."); return; }
@@ -78,9 +105,13 @@
     try { file = await toFile(s); } catch { message("Sticker load nahi hua, dobara try karo."); return; }
     const transfer = new DataTransfer();
     transfer.items.add(file);
-    box.focus();
-    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true, cancelable: true }));
+    // Prefer WhatsApp's own "Photos & videos" picker so the file is sent as media (playing GIF with sound), not as a document.
+    if (!(await viaMediaPicker(transfer))) {
+      box.focus();
+      box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true, cancelable: true }));
+    }
     panel.style.display = "none";
+    if (!s.isGif) await turnOnGif();
     autoSend();
   }
 
