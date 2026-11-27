@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as ExtensionRouteImport } from './routes/extension'
 import { Route as ApiSoundRouteImport } from './routes/api/sound'
 import { Route as LangLangRouteImport } from './routes/lang.$lang'
 import { Route as ApiPublicStickersRouteImport } from './routes/api/public/stickers'
@@ -29,6 +30,11 @@ const CreateRoute = CreateRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExtensionRoute = ExtensionRouteImport.update({
+  id: '/extension',
+  path: '/extension',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSoundRoute = ApiSoundRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/explore': typeof ExploreRoute
+  '/extension': typeof ExtensionRoute
   '/api/sound': typeof ApiSoundRoute
   '/lang/$lang': typeof LangLangRoute
   '/api/public/stickers': typeof ApiPublicStickersRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/explore': typeof ExploreRoute
+  '/extension': typeof ExtensionRoute
   '/api/sound': typeof ApiSoundRoute
   '/lang/$lang': typeof LangLangRoute
   '/api/public/stickers': typeof ApiPublicStickersRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/explore': typeof ExploreRoute
+  '/extension': typeof ExtensionRoute
   '/api/sound': typeof ApiSoundRoute
   '/lang/$lang': typeof LangLangRoute
   '/api/public/stickers': typeof ApiPublicStickersRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/explore'
+    | '/extension'
     | '/api/sound'
     | '/lang/$lang'
     | '/api/public/stickers'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/explore'
+    | '/extension'
     | '/api/sound'
     | '/lang/$lang'
     | '/api/public/stickers'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/explore'
+    | '/extension'
     | '/api/sound'
     | '/lang/$lang'
     | '/api/public/stickers'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
   ExploreRoute: typeof ExploreRoute
+  ExtensionRoute: typeof ExtensionRoute
   ApiSoundRoute: typeof ApiSoundRoute
   LangLangRoute: typeof LangLangRoute
   ApiPublicStickersRoute: typeof ApiPublicStickersRoute
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/extension': {
+      id: '/extension'
+      path: '/extension'
+      fullPath: '/extension'
+      preLoaderRoute: typeof ExtensionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sound': {
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
   ExploreRoute: ExploreRoute,
+  ExtensionRoute: ExtensionRoute,
   ApiSoundRoute: ApiSoundRoute,
   LangLangRoute: LangLangRoute,
   ApiPublicStickersRoute: ApiPublicStickersRoute,

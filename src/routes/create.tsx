@@ -9,6 +9,7 @@ import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
 import { SoundGif } from "@/components/SoundGif";
+import { ExtensionButton } from "@/components/ExtensionButton";
 
 type S = { gif: string; preview: string; title: string; lang: string };
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -187,6 +188,7 @@ function CreatePage() {
               <div className="mt-3 flex flex-wrap gap-2">
                 
                 <button onClick={() => { setCopyMsg(""); sendToWhatsApp(result.url, title).then((r) => setCopyMsg(r === "web" ? WEB_HINT : "")).catch((e: Error) => e.name !== "AbortError" && setCopyMsg(e.message)); }} className="rounded-full border-2 border-foreground bg-[#25D366] px-4 py-2 text-sm font-semibold text-white">📤 Share sticker</button>
+                <ExtensionButton url={result.url} title={title} />
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
               {copyMsg && <p className="mt-2 text-sm text-muted-foreground">{copyMsg}</p>}

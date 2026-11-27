@@ -7,6 +7,7 @@ export function TopNav() {
       <div className="flex gap-2 text-sm font-semibold">
         <Link to="/" className="rounded-full px-3 py-1.5" inactiveProps={{ className: "text-foreground" }} activeProps={{ className: "bg-foreground text-background" }} activeOptions={{ exact: true }}>Home</Link>
         <Link to="/explore" search={{ q: "" }} className="rounded-full px-3 py-1.5" inactiveProps={{ className: "text-foreground" }} activeProps={{ className: "bg-foreground text-background" }}>Public stickers</Link>
+        <Link to="/extension" className="hidden rounded-full px-3 py-1.5 sm:inline" inactiveProps={{ className: "text-foreground" }} activeProps={{ className: "bg-foreground text-background" }}>Extension</Link>
       </div>
     </nav>
   );

@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { SearchBar } from "@/components/SearchBar";
 import { listPublicStickers } from "@/lib/public-stickers.functions";
 import { SoundGif } from "@/components/SoundGif";
+import { ExtensionButton } from "@/components/ExtensionButton";
 import { sendToWhatsApp, prepareShare, WEB_HINT } from "@/lib/send-to-whatsapp";
 
 export const Route = createFileRoute("/explore")({
@@ -65,6 +66,9 @@ function Explore() {
                     className="mt-2 w-full rounded-full border-2 border-foreground bg-[#25D366] py-1 text-xs font-semibold text-white">
                     📤 Share sticker
                   </button>
+                )}
+                {s.video_url && (
+                  <ExtensionButton url={s.video_url} title={s.title} small />
                 )}
               </div>
             </div>
