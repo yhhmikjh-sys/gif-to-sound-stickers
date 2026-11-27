@@ -103,5 +103,12 @@ export async function makeSoundSticker(opts: {
   src.disconnect();
   await ac.close();
   const type = mime.split(";")[0]!;
-  return { blob: new Blob(chunks, { type }), mime: type };
+  const raw = new Blob(chunks, { type });
+  try {
+    const { toWhatsAppMp4 } = await import("./whatsapp-mp4");
+    return { blob: await toWhatsAppMp4(raw), mime: "video/mp4" };
+  } catch (e) {
+    console.warn("WhatsApp MP4 re-encode failed, using raw recording", e);
+    return { blob: raw, mime: type };
+  }
 }

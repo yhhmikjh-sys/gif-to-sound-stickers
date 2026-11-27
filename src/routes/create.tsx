@@ -1,3 +1,4 @@
+import { preloadWhatsAppEncoder } from "@/lib/whatsapp-mp4";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -110,6 +111,7 @@ function CreatePage() {
           initialQuery={title.split(" ").slice(0, 2).join(" ")}
           onClose={() => setPicker(false)}
           onSelect={(snd) => {
+            preloadWhatsAppEncoder();
             setPack(snd); setFile(null); setSoundSrc(""); setDuration(0); setStart(0); setResult(null); setPicker(false);
             // Download the sound once; the trimmer, preview and Create all reuse this copy.
             void fetch(soundUrl(snd.path)).then((r) => r.blob()).then((b) => setSoundSrc(URL.createObjectURL(b)));
