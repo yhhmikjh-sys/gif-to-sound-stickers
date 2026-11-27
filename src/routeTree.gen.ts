@@ -10,33 +10,80 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CreateRouteImport } from './routes/create'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as LangLangRouteImport } from './routes/lang.$lang'
+import { Route as ApiPublicStickersRouteImport } from './routes/api/public/stickers'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LangLangRoute = LangLangRouteImport.update({
+  id: '/lang/$lang',
+  path: '/lang/$lang',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicStickersRoute = ApiPublicStickersRouteImport.update({
+  id: '/api/public/stickers',
+  path: '/api/public/stickers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/explore': typeof ExploreRoute
+  '/lang/$lang': typeof LangLangRoute
+  '/api/public/stickers': typeof ApiPublicStickersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/explore': typeof ExploreRoute
+  '/lang/$lang': typeof LangLangRoute
+  '/api/public/stickers': typeof ApiPublicStickersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/explore': typeof ExploreRoute
+  '/lang/$lang': typeof LangLangRoute
+  '/api/public/stickers': typeof ApiPublicStickersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    '/' | '/create' | '/explore' | '/lang/$lang' | '/api/public/stickers'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/create' | '/explore' | '/lang/$lang' | '/api/public/stickers'
+  id:
+    | '__root__'
+    | '/'
+    | '/create'
+    | '/explore'
+    | '/lang/$lang'
+    | '/api/public/stickers'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateRoute: typeof CreateRoute
+  ExploreRoute: typeof ExploreRoute
+  LangLangRoute: typeof LangLangRoute
+  ApiPublicStickersRoute: typeof ApiPublicStickersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +95,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lang/$lang': {
+      id: '/lang/$lang'
+      path: '/lang/$lang'
+      fullPath: '/lang/$lang'
+      preLoaderRoute: typeof LangLangRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/stickers': {
+      id: '/api/public/stickers'
+      path: '/api/public/stickers'
+      fullPath: '/api/public/stickers'
+      preLoaderRoute: typeof ApiPublicStickersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateRoute: CreateRoute,
+  ExploreRoute: ExploreRoute,
+  LangLangRoute: LangLangRoute,
+  ApiPublicStickersRoute: ApiPublicStickersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

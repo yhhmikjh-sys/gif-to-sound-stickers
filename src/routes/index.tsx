@@ -1,126 +1,53 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
-import { searchStickers, makeWhatsAppSticker, type Sticker } from "@/lib/stickers.functions";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LANGUAGES } from "@/lib/languages";
+import { TopNav } from "@/components/TopNav";
+import { SearchBar } from "@/components/SearchBar";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sticker Search" },
-      { name: "description", content: "Search and find stickers instantly." },
-      { property: "og:title", content: "Sticker Search" },
-      { property: "og:description", content: "Search and find stickers instantly." },
+      { title: "StikDesi — Indian GIFs & sound stickers" },
+      { name: "description", content: "Pick an Indian language, find GIFs and make WhatsApp sound stickers." },
+      { property: "og:title", content: "StikDesi — Indian GIFs & sound stickers" },
+      { property: "og:description", content: "Pick an Indian language, find GIFs and make WhatsApp sound stickers." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Index,
+  component: Dashboard,
 });
 
-function Index() {
-  const [input, setInput] = useState("");
-  const [q, setQ] = useState("");
-  const [kind, setKind] = useState<"gifs" | "stickers">("gifs");
-  const sentinel = useRef<HTMLDivElement>(null);
-
-  const query = useInfiniteQuery({
-    queryKey: ["stickers", kind, q],
-    enabled: !!q,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => searchStickers({ data: { q, kind, offset: pageParam } }),
-    getNextPageParam: (last) => last.nextOffset ?? undefined,
-  });
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (e) => {
-        if (e[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) void fetchNextPage();
-      },
-      { rootMargin: "600px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const seen = new Set<string>();
-  const items = (query.data?.pages.flatMap((p) => p.items) ?? []).filter((s) =>
-    seen.has(s.id) ? false : (seen.add(s.id), true),
-  );
-
+function Dashboard() {
+  const navigate = useNavigate();
   return (
-    <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="text-center font-display text-5xl text-foreground">Sticker Search</h1>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setQ(input.trim());
-          }}
-          className="sticky top-3 z-10 mx-auto mt-8 flex max-w-xl gap-2"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="cat, love, anime..."
-            className="flex-1 rounded-full border-2 border-foreground bg-card px-5 py-3 text-foreground outline-none focus:ring-4 focus:ring-primary/40"
-          />
-          <button className="rounded-full border-2 border-foreground bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-pop transition active:translate-y-0.5">
-            Search
-          </button>
-        </form>
+    <main className="min-h-screen pb-16">
+      <TopNav />
+      <div className="mx-auto max-w-5xl px-4">
+        <h1 className="mt-10 text-center font-display text-5xl text-foreground">Desi GIFs & Stickers</h1>
+        <p className="mt-2 text-center text-muted-foreground">Pick a language, choose a GIF, add a sound.</p>
+        <SearchBar placeholder="Search anything... CID, cat, Salman" onSearch={(q) => q && navigate({ to: "/lang/$lang", params: { lang: "all" }, search: { q } })} />
 
-        <div className="mx-auto mt-4 flex max-w-xs overflow-hidden rounded-full border-2 border-foreground">
-          {(["gifs", "stickers"] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setKind(k)}
-              className={`flex-1 py-2 text-sm font-semibold ${kind === k ? "bg-foreground text-background" : "bg-card text-foreground"}`}
+        <h2 className="mt-12 text-xl font-bold text-foreground">Languages</h2>
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {LANGUAGES.map((l, i) => (
+            <Link
+              key={l.slug}
+              to="/lang/$lang"
+              params={{ lang: l.slug }}
+              search={{ q: "" }}
+              className={`flex h-32 flex-col justify-between rounded-3xl border-2 border-foreground p-4 shadow-pop transition hover:-rotate-1 ${i % 3 === 0 ? "bg-primary text-primary-foreground" : i % 3 === 1 ? "bg-card text-foreground" : "bg-accent-warm text-foreground"}`}
             >
-              {k === "gifs" ? "GIF" : "Sticker"}
-            </button>
+              <span className="font-display text-3xl">{l.native}</span>
+              <span className="font-semibold">{l.name}</span>
+            </Link>
           ))}
         </div>
 
-        {query.isError && <p className="mt-8 text-center text-destructive">Search failed, try again.</p>}
-        {query.isSuccess && items.length === 0 && (
-          <p className="mt-8 text-center text-muted-foreground">No stickers found.</p>
-        )}
-        <div className="mt-10 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-          {items.map((s) => (
-            <StickerCard key={s.id} s={s} />
-          ))}
-        </div>
-        <div ref={sentinel} className="py-8 text-center text-muted-foreground">
-          {(query.isFetching || isFetchingNextPage) && "Loading..."}
-          {query.isSuccess && !hasNextPage && items.length > 0 && "That's all!"}
-        </div>
+        <Link to="/explore" search={{ q: "" }} className="mt-10 block rounded-3xl border-2 border-foreground bg-foreground p-6 text-background shadow-pop">
+          <span className="font-display text-2xl">Public stickers →</span>
+          <p className="mt-1 text-sm opacity-80">Sound stickers made by everyone. Search by title.</p>
+        </Link>
       </div>
     </main>
-  );
-}
-
-function StickerCard({ s }: { s: Sticker }) {
-  const make = useMutation({
-    mutationFn: () => makeWhatsAppSticker({ data: { imageUrl: s.original } }),
-    onSuccess: (dataUrl) => {
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `sticker-${s.id}.webp`;
-      a.click();
-    },
-  });
-  return (
-    <div className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
-      <img src={s.image} alt={s.title} loading="lazy" className="aspect-square w-full object-contain p-1" />
-      <button
-        onClick={() => make.mutate()}
-        disabled={make.isPending}
-        className="w-full border-t-2 border-foreground bg-primary py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
-      >
-        {make.isPending ? "Making..." : make.isError ? "Failed, retry" : "WhatsApp ⬇"}
-      </button>
-    </div>
   );
 }

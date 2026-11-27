@@ -81,10 +81,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sticker Search" },
+      { title: "StikDesi" },
       { name: "description", content: "Search and find stickers instantly." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Sticker Search" },
+      { property: "og:title", content: "StikDesi" },
       { property: "og:description", content: "Search and find stickers instantly." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
