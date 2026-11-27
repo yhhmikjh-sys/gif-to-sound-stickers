@@ -1,6 +1,5 @@
 // Browser-only. Phone: opens the system share sheet with the file (pick WhatsApp or WhatsApp Business, then the chat).
-// Computer: Chrome/Edge usually show the system share sheet too (WhatsApp desktop is in it). Otherwise the file is
-// saved and the WhatsApp desktop app (or WhatsApp Web) opens so it can be attached.
+// Computer: Chrome/Edge usually show the system share sheet too. Nothing is ever downloaded.
 // Phones (Safari especially) only open the share menu right after a tap, so the file is fetched ahead of time.
 const ready = new Map<string, Promise<File>>();
 export function prepareShare(url: string, title: string): Promise<File> {
@@ -23,16 +22,12 @@ export async function sendToWhatsApp(url: string, title: string): Promise<"share
     await navigator.share({ files: [file] });
     return "shared";
   }
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = file.name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
-  // Opens the installed WhatsApp desktop app; if it isn't installed, fall back to WhatsApp Web.
-  const t = setTimeout(() => window.open("https://web.whatsapp.com/", "_blank", "noopener"), 1500);
-  window.addEventListener("blur", () => clearTimeout(t), { once: true });
-  window.location.href = "whatsapp://";
+  // Never download. If the browser can't share files, share the sticker link instead.
+  if (navigator.share && /^https?:/.test(url)) {
+    await navigator.share({ title: file.name, url });
+    return "shared";
+  }
   return "web";
 }
 
-export const WEB_HINT = "Sticker save ho gaya aur WhatsApp khul gaya. Chat kholo → 📎 → Photos & videos → yeh file chuno → GIF switch on → Send.";
+export const WEB_HINT = "Is browser mein share menu nahi hai. Phone par Chrome ya Safari mein kholo.";

@@ -85,7 +85,7 @@ export async function makeSoundSticker(opts: {
     "video/webm;codecs=vp8,opus",
     "video/webm",
   ].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 1_500_000 });
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 700_000, audioBitsPerSecond: 64_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
 
