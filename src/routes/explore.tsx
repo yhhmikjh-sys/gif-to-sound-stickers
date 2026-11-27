@@ -55,7 +55,7 @@ function Explore() {
           {items.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
               {s.video_url ? (
-                <div onPointerEnter={() => void prepareShare(s.video_url!, s.title).catch(() => {})} onTouchStart={() => void prepareShare(s.video_url!, s.title).catch(() => {})}><SoundGif url={s.video_url} poster={s.gif_url} startMuted /></div>
+                <div onPointerEnter={() => { const t = phoneShareTarget(s.video_url!, s.sticker_url); void prepareShare(t.url, s.title, t.kind).catch(() => {}); }} onTouchStart={() => { const t = phoneShareTarget(s.video_url!, s.sticker_url); void prepareShare(t.url, s.title, t.kind).catch(() => {}); }}><SoundGif url={s.video_url} poster={s.gif_url} startMuted /></div>
               ) : (
                 <img src={s.gif_url} alt={s.title} loading="lazy" className="aspect-square w-full object-contain" />
               )}
