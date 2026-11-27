@@ -67,7 +67,14 @@ export async function makeSoundSticker(opts: {
   src.connect(dest);
 
   const stream = new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
-  const mime = MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm";
+  // WhatsApp plays "GIF with sound" from an H.264 + AAC MP4, so prefer that.
+  const mime = [
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4;codecs=avc1,mp4a",
+    "video/mp4",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 1_500_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
@@ -85,5 +92,6 @@ export async function makeSoundSticker(opts: {
   clearInterval(timer);
   src.disconnect();
   await ac.close();
-  return { blob: new Blob(chunks, { type: mime }), mime };
+  const type = mime.split(";")[0]!;
+  return { blob: new Blob(chunks, { type }), mime: type };
 }

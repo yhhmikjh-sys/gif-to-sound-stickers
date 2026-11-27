@@ -59,7 +59,7 @@ function CreatePage() {
     mutationFn: async () => {
       let audio: ArrayBuffer;
       if (pack) {
-        const r = await fetch(soundUrl(pack.path));
+        const r = await fetch(soundSrc || soundUrl(pack.path));
         if (!r.ok) throw new Error("Couldn't load the sound");
         audio = await r.arrayBuffer();
       } else if (file) audio = await file.arrayBuffer();
@@ -94,9 +94,9 @@ function CreatePage() {
           initialQuery={title.split(" ").slice(0, 2).join(" ")}
           onClose={() => setPicker(false)}
           onSelect={(snd) => {
-            setPack(snd); setFile(null); setSoundSrc(soundUrl(snd.path)); setStart(0); setResult(null); setPicker(false);
-            const a = new Audio(soundUrl(snd.path));
-            a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); };
+            setPack(snd); setFile(null); setSoundSrc(""); setDuration(0); setStart(0); setResult(null); setPicker(false);
+            // Download the sound once; the trimmer, preview and Create all reuse this copy.
+            void fetch(soundUrl(snd.path)).then((r) => r.blob()).then((b) => setSoundSrc(URL.createObjectURL(b)));
           }}
         />
       )}
@@ -105,9 +105,7 @@ function CreatePage() {
         <div>
           <div className="overflow-hidden rounded-3xl border-2 border-foreground bg-card shadow-pop">
             {result ? (
-              <video src={result.url} autoPlay playsInline
-                onEnded={(e) => { const v = e.currentTarget; v.muted = true; v.currentTime = 0; void v.play(); }}
-                onClick={(e) => { const v = e.currentTarget; v.muted = false; v.currentTime = 0; void v.play(); }} className="aspect-square w-full cursor-pointer bg-card" />
+              <SoundGif url={result.url} />
             ) : (
               <img key={gifKey} src={`${s.gif || s.preview}#${gifKey}`} alt={title} className="aspect-square w-full object-contain" />
             )}
@@ -144,6 +142,7 @@ function CreatePage() {
             </details>
           </div>
 
+          {pack && !soundSrc && <div className="h-24 animate-pulse rounded-2xl border-2 border-foreground bg-muted p-4 text-sm text-muted-foreground">Loading sound…</div>}
           {(file || pack) && soundSrc && (
             <div className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
               <div className="flex items-center justify-between">
@@ -160,7 +159,7 @@ function CreatePage() {
             Save to public stickers so everyone can find it
           </label>
 
-          <button onClick={() => create.mutate()} disabled={create.isPending || !(file || pack) || title.trim().length < 2}
+          <button onClick={() => create.mutate()} disabled={create.isPending || !soundSrc || !(file || pack) || title.trim().length < 2}
             className="w-full rounded-full border-2 border-foreground bg-primary py-3 text-lg font-bold text-primary-foreground shadow-pop disabled:opacity-50">
             {create.isPending ? `Creating... (${seconds.toFixed(1)}s)` : "Create"}
           </button>
@@ -169,8 +168,13 @@ function CreatePage() {
           {result && (
             <div className="rounded-2xl border-2 border-foreground bg-card p-4">
               <p className="font-semibold text-foreground">Done! {result.saved && "Saved to public stickers."}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {result.mime === "video/mp4"
+                  ? "In WhatsApp: attach → Gallery → pick this file → tap the GIF switch at the top → Send. It shows as a GIF with a 🔇 sound button."
+                  : "This browser can't make MP4. Open the app in Chrome, Edge or Safari to get a WhatsApp GIF with sound."}
+              </p>
               <div className="mt-3 flex gap-2">
-                <button onClick={() => download(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`)} className="rounded-full border-2 border-foreground bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Download video</button>
+                <button onClick={() => download(result.url, `${title || "sticker"}.${result.mime === "video/mp4" ? "mp4" : "webm"}`)} className="rounded-full border-2 border-foreground bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Download GIF with sound (MP4)</button>
                 {result.saved && <Link to="/explore" search={{ q: "" }} className="rounded-full border-2 border-foreground px-4 py-2 text-sm font-semibold text-foreground">See public stickers</Link>}
               </div>
             </div>
@@ -178,5 +182,20 @@ function CreatePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// WhatsApp-style "GIF with sound": loops forever, speaker button toggles sound.
+function SoundGif({ url }: { url: string }) {
+  const [muted, setMuted] = useState(false);
+  return (
+    <div className="relative">
+      <video src={url} autoPlay loop playsInline muted={muted} className="aspect-square w-full bg-card" />
+      <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? "Sound on" : "Sound off"}
+        className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-lg text-white">
+        {muted ? "🔇" : "🔊"}
+      </button>
+      <span className="absolute bottom-3 left-3 rounded-md bg-black/50 px-2 py-0.5 text-xs font-bold text-white">GIF</span>
+    </div>
   );
 }
