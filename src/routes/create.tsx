@@ -50,6 +50,7 @@ function CreatePage() {
   const [end, setEnd] = useState(5);
   const seconds = Math.max(0.5, end - start);
   const [soundSrc, setSoundSrc] = useState("");
+  const [gifKey, setGifKey] = useState(0);
 
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
@@ -104,9 +105,11 @@ function CreatePage() {
         <div>
           <div className="overflow-hidden rounded-3xl border-2 border-foreground bg-card shadow-pop">
             {result ? (
-              <video src={result.url} autoPlay loop playsInline onClick={(e) => { e.currentTarget.muted = false; void e.currentTarget.play(); }} className="aspect-square w-full cursor-pointer bg-card" />
+              <video src={result.url} autoPlay playsInline
+                onEnded={(e) => { const v = e.currentTarget; v.muted = true; v.currentTime = 0; void v.play(); }}
+                onClick={(e) => { const v = e.currentTarget; v.muted = false; v.currentTime = 0; void v.play(); }} className="aspect-square w-full cursor-pointer bg-card" />
             ) : (
-              <img src={s.gif || s.preview} alt={title} className="aspect-square w-full object-contain" />
+              <img key={gifKey} src={`${s.gif || s.preview}#${gifKey}`} alt={title} className="aspect-square w-full object-contain" />
             )}
           </div>
           <button onClick={() => wa.mutate()} disabled={wa.isPending} className="mt-3 w-full rounded-full border-2 border-foreground bg-card py-2 text-sm font-semibold text-foreground disabled:opacity-60">
@@ -147,7 +150,7 @@ function CreatePage() {
                 <span className="font-semibold text-foreground">✂️ Cut the sound</span>
                 <span className="text-sm text-muted-foreground">{start.toFixed(1)}s → {end.toFixed(1)}s ({seconds.toFixed(1)}s)</span>
               </div>
-              <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onDuration={(d) => { setDuration(d); setStart(0); setEnd(Math.min(10, d)); }} />
+              <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onPlay={() => setGifKey((k) => k + 1)} onDuration={(d) => { setDuration(d); setStart(0); setEnd(Math.min(10, d)); }} />
               <p className="text-xs text-muted-foreground">Max 10 seconds. Total sound: {Number.isFinite(duration) ? duration.toFixed(1) : "…"}s</p>
             </div>
           )}

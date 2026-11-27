@@ -32,4 +32,4 @@ use the editor.
 - Server functions live in src/lib/*.functions.ts (src/server is import-protected from client code).
 - GIPHY searches go through src/lib/stickers.functions.ts server functions; never call GIPHY from the browser.
 - Public stickers are written only by the savePublicSticker server function (admin client, validated input); the table has anon SELECT only, and the bucket is private, so videos are served via signed URLs.
-- Sound stickers are recorded in the browser (canvas + MediaRecorder) in src/lib/make-sound-sticker.ts; no server-side ffmpeg on the Worker.
+- Sound stickers are recorded in the browser (gifuct-js frame decode + canvas + MediaRecorder) in src/lib/make-sound-sticker.ts; the GIF loops for the cut sound length and the sound plays once. No server-side ffmpeg on the Worker.

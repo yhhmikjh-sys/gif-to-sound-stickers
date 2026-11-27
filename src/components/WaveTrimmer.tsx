@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from "react";
 const BARS = 80;
 
 // Voice-note style bars with left/right handles. Releasing a handle plays the cut.
-export function WaveTrimmer({ src, duration, start, end, onChange, onDuration }: {
+export function WaveTrimmer({ src, duration, start, end, onChange, onDuration, onPlay }: {
   src: string; duration: number; start: number; end: number;
   onChange: (start: number, end: number) => void;
   onDuration: (d: number) => void;
+  onPlay?: () => void;
 }) {
   const [peaks, setPeaks] = useState<number[]>([]);
   const [pos, setPos] = useState<number | null>(null);
@@ -50,7 +51,7 @@ export function WaveTrimmer({ src, duration, start, end, onChange, onDuration }:
       setPos(a.currentTime);
       requestAnimationFrame(tick);
     };
-    void a.play().then(() => requestAnimationFrame(tick));
+    void a.play().then(() => { onPlay?.(); requestAnimationFrame(tick); });
   };
 
   const timeAt = (x: number) => {
