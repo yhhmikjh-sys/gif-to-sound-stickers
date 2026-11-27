@@ -97,28 +97,29 @@
     }
   }
 
-  // Feed the file to WhatsApp's own "Create sticker" editor (sticker tray → Create). WhatsApp's new sound
-  // stickers are a native message type only its own UI can send; stickers made from a video keep its audio.
-  async function viaStickerCreator(s) {
-    message("WhatsApp ka sticker editor khol raha hoon…");
+  async function sendAsSticker(s) {
+    const box = document.querySelector('footer div[contenteditable="true"]');
+    if (!box) { message("Pehle koi chat kholo, phir sticker chuno."); return; }
+    message("Sticker bana raha hoon…");
     let file;
-    try { file = await toFile(s); } catch { message("Sticker load nahi hua."); return; }
-    const before = new Set(document.querySelectorAll('input[type="file"]'));
-    const tray = document.querySelector('footer [aria-label*="ticker" i], footer span[data-icon*="sticker"], footer [aria-label*="Emoji" i], footer span[data-icon*="emoji"], footer span[data-icon*="expressions"]');
-    (tray?.closest('button, div[role="button"]') || tray)?.click();
-    let input = null;
-    for (let i = 0; i < 40 && !input; i++) {
-      await wait(150);
-      const create = [...document.querySelectorAll('button, div[role="button"]')].find((b) => /^\s*(Create|बनाएं)\s*$/i.test(b.textContent || "") || /create sticker/i.test(b.getAttribute("aria-label") || ""));
-      input = [...document.querySelectorAll('input[type="file"]')].find((x) => !before.has(x) && /image|video/.test(x.accept || ""));
-      if (!input && create && i % 5 === 0) create.click();
-    }
-    if (!input) { message("WhatsApp ka Create sticker button nahi mila. Sticker tray → Create khud dabao, phir dobara try karo."); return; }
+    try {
+      const webp = s.isGif ? await gifToWebp(s) : await makeWebpSticker(await videoSrc(s));
+      file = new File([webp], "sticker.webp", { type: "image/webp" });
+    } catch { message("Sticker nahi bana, dobara try karo."); return; }
     const t = new DataTransfer(); t.items.add(file);
-    input.files = t.files;
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    box.focus();
+    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: t, bubbles: true, cancelable: true }));
     panel.style.display = "none";
-    message("Editor mein sound button (🔊) check karo, phir Send dabao.");
+    autoSend();
+  }
+  async function gifToWebp(s) {
+    // A plain GIF has no video; draw it through an <img> sampled as a single still sticker.
+    const img = new Image(); img.src = await blobUrl(s.url);
+    await img.decode();
+    const c = document.createElement("canvas"); c.width = c.height = 512;
+    const k = Math.min(512 / img.width, 512 / img.height);
+    c.getContext("2d").drawImage(img, (512 - img.width * k) / 2, (512 - img.height * k) / 2, img.width * k, img.height * k);
+    return await new Promise((r) => c.toBlob(r, "image/webp", 0.8));
   }
 
   async function dropIntoChat(s) {
@@ -156,7 +157,7 @@
       const media = document.createElement("img");
       Object.assign(media.style, { width: "100%", aspectRatio: "1", objectFit: "contain", cursor: "pointer", display: "block", background: "#f4f4f4" });
       media.alt = media.title = s.title;
-      media.onclick = () => dropIntoChat(s);
+      media.onclick = () => sendAsSticker(s);
       const previewSrc = s.dataUrl ? null : (s.gif || (s.isGif ? s.url : null));
       if (previewSrc) blobUrl(previewSrc).then((u) => (media.src = u)).catch(() => {});
       else showVideoFrame(media, s);
@@ -168,10 +169,10 @@
         play.onclick = (e) => { e.stopPropagation(); void togglePlay(s, play); };
         card.append(play);
         const st = document.createElement("button");
-        st.textContent = "Sticker";
-        st.setAttribute("aria-label", "Send as WhatsApp sticker");
+        st.textContent = "GIF 🔊";
+        st.setAttribute("aria-label", "Send as GIF with sound");
         Object.assign(st.style, { position: "absolute", right: "6px", top: "6px", padding: "4px 8px", border: "none", borderRadius: "999px", background: "#111", color: "#fff", cursor: "pointer", fontSize: "11px", fontWeight: "700" });
-        st.onclick = (e) => { e.stopPropagation(); void viaStickerCreator(s); };
+        st.onclick = (e) => { e.stopPropagation(); void dropIntoChat(s); };
         card.append(st);
       }
       const title = document.createElement("div");
