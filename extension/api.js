@@ -36,11 +36,11 @@ async function sbFetch(path, init = {}, retry = true) {
 
 // The signed-in user's stickers with short-lived file links.
 async function sbMyStickers() {
-  const rows = await sbFetch("/rest/v1/my_stickers?select=id,title,video_path,mime&order=created_at.desc&limit=100");
+  const rows = await sbFetch("/rest/v1/my_stickers?select=id,title,gif_url,video_path,mime&order=created_at.desc&limit=100");
   if (!rows.length) return [];
   const signed = await sbFetch("/storage/v1/object/sign/sticker-videos", { method: "POST", body: JSON.stringify({ expiresIn: 3600, paths: rows.map((r) => r.video_path) }) });
   const byPath = new Map(signed.map((x) => [x.path, x.signedURL]));
-  return rows.map((r) => ({ id: r.id, title: r.title, mime: r.mime, url: byPath.get(r.video_path) ? SB_URL + "/storage/v1" + byPath.get(r.video_path) : null })).filter((r) => r.url);
+  return rows.map((r) => ({ id: r.id, title: r.title, gif: r.gif_url, mime: r.mime, url: byPath.get(r.video_path) ? SB_URL + "/storage/v1" + byPath.get(r.video_path) : null })).filter((r) => r.url);
 }
 
 // Published stickers are readable without an account. Only root-level public files are exposed by storage policy.
@@ -62,6 +62,7 @@ async function sbPublicStickers(offset = 0) {
     items: rows.map((x) => ({
       id: `public-${x.id}`,
       title: x.title,
+      gif: x.gif_url,
       url: x.video_url ? byPath.get(x.video_url) : x.gif_url,
       isGif: !x.video_url,
     })).filter((x) => x.url),
