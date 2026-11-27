@@ -6,6 +6,7 @@ import { makeSoundSticker } from "@/lib/make-sound-sticker";
 import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
+import { WaveTrimmer } from "@/components/WaveTrimmer";
 
 type S = { gif: string; preview: string; title: string; lang: string };
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -47,18 +48,9 @@ function CreatePage() {
   const [duration, setDuration] = useState(0);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(5);
-  const [previewing, setPreviewing] = useState(false);
   const seconds = Math.max(0.5, end - start);
+  const [soundSrc, setSoundSrc] = useState("");
 
-  const previewCut = () => {
-    const srcUrl = pack ? soundUrl(pack.path) : file ? URL.createObjectURL(file) : "";
-    if (!srcUrl) return;
-    const a = new Audio(srcUrl);
-    a.currentTime = start;
-    setPreviewing(true);
-    void a.play();
-    setTimeout(() => { a.pause(); setPreviewing(false); }, seconds * 1000);
-  };
   const [isPublic, setIsPublic] = useState(true);
   const [result, setResult] = useState<{ url: string; mime: string; saved: boolean } | null>(null);
 
@@ -101,7 +93,7 @@ function CreatePage() {
           initialQuery={title.split(" ").slice(0, 2).join(" ")}
           onClose={() => setPicker(false)}
           onSelect={(snd) => {
-            setPack(snd); setFile(null); setStart(0); setResult(null); setPicker(false);
+            setPack(snd); setFile(null); setSoundSrc(soundUrl(snd.path)); setStart(0); setResult(null); setPicker(false);
             const a = new Audio(soundUrl(snd.path));
             a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); };
           }}
@@ -114,7 +106,7 @@ function CreatePage() {
             {result ? (
               <video src={result.url} autoPlay loop playsInline onClick={(e) => { e.currentTarget.muted = false; void e.currentTarget.play(); }} className="aspect-square w-full cursor-pointer bg-card" />
             ) : (
-              <img src={previewing ? s.gif : s.preview || s.gif} alt={title} className="aspect-square w-full object-contain" />
+              <img src={s.gif || s.preview} alt={title} className="aspect-square w-full object-contain" />
             )}
           </div>
           <button onClick={() => wa.mutate()} disabled={wa.isPending} className="mt-3 w-full rounded-full border-2 border-foreground bg-card py-2 text-sm font-semibold text-foreground disabled:opacity-60">
@@ -142,34 +134,21 @@ function CreatePage() {
               <summary className="cursor-pointer">Or use a sound from your phone</summary>
               <input type="file" accept="audio/*,video/*" onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
-                setFile(f); setPack(null); setStart(0); setResult(null);
+                setFile(f); setPack(null); if (f) setSoundSrc(URL.createObjectURL(f)); setStart(0); setResult(null);
                 if (f) { const a = new Audio(URL.createObjectURL(f)); a.onloadedmetadata = () => { setDuration(a.duration || 0); setEnd(Math.min(10, a.duration || 5)); }; }
               }} className="mt-2 w-full text-sm text-foreground" />
               {file && !pack && <p className="mt-1 text-foreground">Using: {file.name}</p>}
             </details>
           </div>
 
-          {(file || pack) && duration > 0 && (
+          {(file || pack) && soundSrc && (
             <div className="space-y-3 rounded-2xl border-2 border-foreground bg-card p-4">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground">✂️ Cut the sound</span>
                 <span className="text-sm text-muted-foreground">{start.toFixed(1)}s → {end.toFixed(1)}s ({seconds.toFixed(1)}s)</span>
               </div>
-              <label className="block text-sm text-foreground">From
-                <input aria-label="Cut from" type="range" min={0} max={Math.max(0, duration - 0.5)} step={0.1} value={start}
-                  onChange={(e) => { const v = Number(e.target.value); setStart(v); if (end <= v + 0.5 || end - v > 10) setEnd(Math.min(duration, v + Math.min(10, Math.max(0.5, end - start)))); }}
-                  className="mt-1 w-full accent-primary" />
-              </label>
-              <label className="block text-sm text-foreground">To
-                <input aria-label="Cut to" type="range" min={0.5} max={duration} step={0.1} value={end}
-                  onChange={(e) => { const v = Number(e.target.value); setEnd(v); if (v <= start + 0.5) setStart(Math.max(0, v - 0.5)); else if (v - start > 10) setStart(v - 10); }}
-                  className="mt-1 w-full accent-primary" />
-              </label>
-              <p className="text-xs text-muted-foreground">Max 10 seconds. Total sound: {duration.toFixed(1)}s</p>
-              <button type="button" onClick={previewCut} disabled={previewing}
-                className="w-full rounded-full border-2 border-foreground bg-secondary py-2 text-sm font-semibold text-foreground disabled:opacity-60">
-                {previewing ? "🔊 Playing..." : "▶ Preview with GIF"}
-              </button>
+              <WaveTrimmer src={soundSrc} duration={duration} start={start} end={end} onChange={(a, b) => { setStart(a); setEnd(b); }} onDuration={(d) => { setDuration(d); setStart(0); setEnd(Math.min(10, d)); }} />
+              <p className="text-xs text-muted-foreground">Max 10 seconds. Total sound: {Number.isFinite(duration) ? duration.toFixed(1) : "…"}s</p>
             </div>
           )}
 
