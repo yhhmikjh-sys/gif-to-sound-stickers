@@ -4,6 +4,17 @@ import { useEffect, useRef } from "react";
 import { TopNav } from "@/components/TopNav";
 import { SearchBar } from "@/components/SearchBar";
 import { listPublicStickers } from "@/lib/public-stickers.functions";
+import { SoundGif } from "@/components/SoundGif";
+
+// Signed URLs are cross-origin, so fetch to a blob to keep the file name.
+async function saveGif(url: string, title: string) {
+  const blob = await (await fetch(url)).blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title || "sticker"}.${blob.type.includes("webm") ? "webm" : "mp4"}`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
+}
 
 export const Route = createFileRoute("/explore")({
   validateSearch: (s: Record<string, unknown>) => ({ q: typeof s["q"] === "string" ? s["q"] : "" }),
@@ -51,13 +62,19 @@ function Explore() {
           {items.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-2xl border-2 border-foreground bg-card shadow-pop">
               {s.video_url ? (
-                <video src={s.video_url} controls loop playsInline preload="metadata" poster={s.gif_url} className="aspect-square w-full bg-card object-contain" />
+                <SoundGif url={s.video_url} poster={s.gif_url} startMuted />
               ) : (
                 <img src={s.gif_url} alt={s.title} loading="lazy" className="aspect-square w-full object-contain" />
               )}
               <div className="p-2">
                 <p className="truncate text-sm font-semibold text-foreground">{s.title}</p>
                 <p className="text-xs capitalize text-muted-foreground">{s.language}</p>
+                {s.video_url && (
+                  <button type="button" onClick={() => void saveGif(s.video_url!, s.title)}
+                    className="mt-2 w-full rounded-full border-2 border-foreground bg-primary py-1 text-xs font-semibold text-primary-foreground">
+                    ⬇ GIF with sound
+                  </button>
+                )}
               </div>
             </div>
           ))}

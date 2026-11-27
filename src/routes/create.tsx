@@ -7,6 +7,7 @@ import { savePublicSticker } from "@/lib/public-stickers.functions";
 import { makeWhatsAppSticker } from "@/lib/stickers.functions";
 import { SoundPicker, soundUrl } from "@/components/SoundPicker";
 import { WaveTrimmer } from "@/components/WaveTrimmer";
+import { SoundGif } from "@/components/SoundGif";
 
 type S = { gif: string; preview: string; title: string; lang: string };
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -185,17 +186,3 @@ function CreatePage() {
   );
 }
 
-// WhatsApp-style "GIF with sound": loops forever, speaker button toggles sound.
-function SoundGif({ url }: { url: string }) {
-  const [muted, setMuted] = useState(false);
-  return (
-    <div className="relative">
-      <video src={url} autoPlay loop playsInline muted={muted} className="aspect-square w-full bg-card" />
-      <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? "Sound on" : "Sound off"}
-        className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-lg text-white">
-        {muted ? "🔇" : "🔊"}
-      </button>
-      <span className="absolute bottom-3 left-3 rounded-md bg-black/50 px-2 py-0.5 text-xs font-bold text-white">GIF</span>
-    </div>
-  );
-}
